@@ -1,0 +1,2508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSH · 资产光影匹配（Grade / Keyer / CC）</title>
+<style>
+  :root {
+    --bg-0: #111317;
+    --bg-1: #181b21;
+    --bg-2: #20242c;
+    --bg-3: #282d37;
+    --border: #2f3542;
+    --border-light: #3d4556;
+    --text-0: #eef1f6;
+    --text-1: #b5bece;
+    --text-2: #7e889b;
+    --accent: #4c8dff;
+    --accent-hover: #649dff;
+    --accent-soft: rgba(76, 141, 255, 0.16);
+    --ok: #38c172;
+    --warn: #f5a623;
+    --danger: #e55353;
+    --r-col: #ff6b6b;
+    --g-col: #51cf66;
+    --b-col: #4dabf7;
+    --radius: 8px;
+    --font-mono: "Cascadia Code", "Consolas", "SFMono-Regular", monospace;
+    --font-ui: "Microsoft YaHei UI", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg-0); color: var(--text-0);
+    font-family: var(--font-ui); font-size: 13px;
+    user-select: none;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #363c49; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #4a5264; }
+
+  /* App Layout */
+  .app {
+    display: grid;
+    grid-template-rows: 48px 1fr;
+    grid-template-columns: 272px 1fr 348px;
+    width: 100%; height: 100%;
+  }
+
+  /* Header */
+  .header {
+    grid-column: 1 / 4;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px; min-width: 0;
+  }
+  .brand-badge {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: linear-gradient(135deg, #4c8dff, #2563eb);
+    display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff;
+    flex-shrink: 0;
+  }
+  .brand-title { font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .cs-pill {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-1);
+    background: var(--bg-2); border: 1px solid var(--border);
+    padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+
+  /* Buttons */
+  button {
+    font-family: inherit; font-size: 12px; color: var(--text-0);
+    background: var(--bg-2); border: 1px solid var(--border-light);
+    border-radius: 6px; padding: 6px 11px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    transition: background 0.14s, border-color 0.14s, transform 0.08s;
+    white-space: nowrap;
+  }
+  button:hover:not(:disabled) { background: var(--bg-3); border-color: #525c72; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.42; cursor: not-allowed; }
+  button.primary {
+    background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600;
+  }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button.success {
+    background: #1f7a4c; border-color: #299961; color: #fff; font-weight: 600;
+  }
+  button.success:hover:not(:disabled) { background: #26915b; }
+  button.ghost { background: transparent; border-color: transparent; color: var(--text-1); }
+  button.ghost:hover:not(:disabled) { background: var(--bg-2); color: var(--text-0); }
+  button.small { padding: 4px 8px; font-size: 11px; }
+  button.active {
+    background: var(--accent-soft); border-color: var(--accent); color: #9dc2ff;
+  }
+
+  /* Panels */
+  .sidebar-left, .sidebar-right {
+    background: var(--bg-1);
+    overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  .sidebar-left { border-right: 1px solid var(--border); }
+  .sidebar-right { border-left: 1px solid var(--border); }
+
+  .section {
+    padding: 12px 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 6px;
+    margin-bottom: 9px;
+  }
+  .section-title {
+    font-size: 12px; font-weight: 600; color: var(--text-1);
+    letter-spacing: 0.3px; display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Drop zones */
+  .dropzone {
+    border: 1.5px dashed var(--border-light);
+    border-radius: var(--radius);
+    background: var(--bg-0);
+    padding: 12px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--accent);
+    background: rgba(76, 141, 255, 0.08);
+  }
+  .dropzone-hint { color: var(--text-2); font-size: 11.5px; line-height: 1.55; }
+  .dropzone-hint strong { color: var(--text-0); font-weight: 500; }
+
+  /* Reference ROI preview */
+  .ref-box {
+    position: relative; width: 100%; background: #0b0d10;
+    border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; margin-top: 8px; display: none;
+    cursor: crosshair;
+  }
+  .ref-box.has-img { display: block; }
+  #refCanvas { display: block; width: 100%; height: auto; max-height: 175px; object-fit: contain; }
+  .ref-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 7px; font-size: 11px; color: var(--text-2); gap: 6px;
+  }
+  .swatches { display: flex; align-items: center; gap: 5px; }
+  .swatch {
+    width: 16px; height: 16px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.22);
+    title: "";
+  }
+  .ref-roi-tip { font-size: 11px; color: var(--text-2); margin-top: 5px; line-height: 1.4; }
+
+  /* Asset Queue List */
+  .asset-list {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-top: 8px; max-height: calc(100vh - 410px); overflow-y: auto;
+  }
+  .asset-item {
+    display: grid; grid-template-columns: 44px 1fr 22px; gap: 8px; align-items: center;
+    padding: 6px; border-radius: 6px;
+    background: var(--bg-2); border: 1px solid transparent;
+    cursor: pointer; transition: border-color 0.12s, background 0.12s;
+  }
+  .asset-item:hover { background: var(--bg-3); }
+  .asset-item.active { border-color: var(--accent); background: rgba(76, 141, 255, 0.14); }
+  .asset-thumb {
+    width: 44px; height: 44px; border-radius: 4px; object-fit: cover;
+    background: #0d0f13; border: 1px solid var(--border);
+  }
+  .asset-info { min-width: 0; }
+  .asset-name {
+    font-size: 12px; color: var(--text-0); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .asset-sub {
+    font-size: 10.5px; color: var(--text-2); font-family: var(--font-mono);
+    margin-top: 2px; display: flex; align-items: center; gap: 5px;
+  }
+  .tag-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--text-2);
+  }
+  .tag-dot.matched { background: var(--ok); }
+  .asset-del {
+    width: 22px; height: 22px; padding: 0; border-radius: 4px;
+    background: transparent; border: none; color: var(--text-2); font-size: 14px;
+  }
+  .asset-del:hover { background: rgba(229, 83, 83, 0.2); color: #ff8585; }
+
+  /* Center Viewport */
+  .viewport-wrap {
+    display: grid; grid-template-rows: 38px 1fr 28px;
+    background: #0c0e12; overflow: hidden; position: relative;
+  }
+  .vp-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; background: var(--bg-1); border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+  .vp-group { display: flex; align-items: center; gap: 5px; }
+  .vp-stage {
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background-image:
+      linear-gradient(45deg, #14171d 25%, transparent 25%),
+      linear-gradient(-45deg, #14171d 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #14171d 75%),
+      linear-gradient(-45deg, transparent 75%, #14171d 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+  }
+  .vp-empty {
+    text-align: center; color: var(--text-2); max-width: 380px; padding: 24px;
+    border: 1.5px dashed var(--border); border-radius: 12px; background: rgba(24,27,33,0.75);
+  }
+  .vp-empty h3 { color: var(--text-0); font-size: 15px; margin-bottom: 8px; font-weight: 600; }
+  .vp-empty p { font-size: 12px; line-height: 1.7; }
+
+  #mainCanvas {
+    display: block; max-width: none; image-rendering: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.65);
+  }
+  .vp-badge {
+    position: absolute; top: 10px; padding: 3px 8px; border-radius: 4px;
+    background: rgba(12, 14, 18, 0.78); border: 1px solid rgba(255,255,255,0.14);
+    font-size: 11px; color: var(--text-0); pointer-events: none; display: none;
+  }
+  .vp-badge.left { left: 12px; }
+  .vp-badge.right { right: 12px; }
+  .vp-status {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; background: var(--bg-1); border-top: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-2);
+    gap: 12px; overflow: hidden;
+  }
+  .vp-status span { white-space: nowrap; }
+
+  /* Right Inspector */
+  .mode-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;
+  }
+  .mode-btn {
+    flex-direction: column; padding: 7px 4px; gap: 2px; font-size: 11.5px;
+  }
+  .mode-btn small { font-size: 10px; color: var(--text-2); font-weight: 400; }
+  .mode-btn.active small { color: #bcd5ff; }
+
+  .match-big-btn {
+    width: 100%; padding: 9px 12px; font-size: 13px;
+  }
+
+  /* Sliders */
+  .ctrl-row { margin-bottom: 9px; }
+  .ctrl-row:last-child { margin-bottom: 0; }
+  .ctrl-label {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px; font-size: 11.5px; color: var(--text-1);
+  }
+  .ctrl-val {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-0);
+    cursor: pointer; padding: 1px 4px; border-radius: 3px;
+  }
+  .ctrl-val:hover { background: var(--bg-3); }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; border-radius: 2px;
+    background: var(--bg-3); outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: #d8e2f5; border: 2px solid var(--accent); cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { background: #fff; }
+
+  /* Select & Input */
+  select, input[type="text"], input[type="number"] {
+    font-family: inherit; font-size: 12px; color: var(--text-0);
+    background: var(--bg-0); border: 1px solid var(--border-light);
+    border-radius: 5px; padding: 5px 7px; outline: none;
+  }
+  select:focus, input[type="text"]:focus, input[type="number"]:focus {
+    border-color: var(--accent);
+  }
+  .row-flex { display: flex; align-items: center; gap: 6px; }
+  .row-flex > select, .row-flex > input[type="text"] { flex: 1; min-width: 0; }
+
+  /* Collapsible Nuke Grade Panel */
+  details.nuke-details summary {
+    list-style: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 600; color: var(--text-1);
+  }
+  details.nuke-details summary::-webkit-details-marker { display: none; }
+  details.nuke-details[open] summary { margin-bottom: 10px; }
+
+  .nuke-param {
+    margin-bottom: 8px; padding-bottom: 7px;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+  }
+  .nuke-param:last-of-type { border-bottom: none; margin-bottom: 6px; }
+  .nuke-param-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; color: var(--text-1); margin-bottom: 4px; font-family: var(--font-mono);
+  }
+  .rgb-inputs {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+  }
+  .rgb-cell {
+    display: flex; align-items: center; background: var(--bg-0);
+    border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+  }
+  .rgb-cell span {
+    width: 16px; text-align: center; font-size: 10px; font-weight: 700;
+    font-family: var(--font-mono);
+  }
+  .rgb-cell.r span { color: var(--r-col); }
+  .rgb-cell.g span { color: var(--g-col); }
+  .rgb-cell.b span { color: var(--b-col); }
+  .rgb-cell input {
+    width: 100%; border: none; background: transparent;
+    padding: 3px 4px; font-family: var(--font-mono); font-size: 11px;
+  }
+
+  .check-row {
+    display: flex; align-items: center; gap: 12px; margin: 6px 0 10px;
+    font-size: 11.5px; color: var(--text-1);
+  }
+  .check-row label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #1d2432; color: #fff; border: 1px solid var(--accent);
+    padding: 8px 16px; border-radius: 8px; font-size: 12.5px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+    z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .dir-pill {
+    font-size: 11px; color: var(--ok); background: rgba(56,193,114,0.12);
+    border: 1px solid rgba(56,193,114,0.35); border-radius: 5px;
+    padding: 4px 8px; margin-top: 6px; display: none;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dir-pill.show { display: block; }
+  .hint-tiny { font-size: 11px; color: var(--text-2); line-height: 1.45; margin-top: 5px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- TOP BAR -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-badge">G</div>
+      <div class="brand-title">DSH · 资产光影匹配</div>
+      <div class="cs-pill">Grade 主调 · Keyer 选区 · CC 修正</div>
+    </div>
+    <div class="header-actions">
+      <button id="btnReset" title="将当前资产图恢复为原始未调色状态">重置参数</button>
+      <button id="btnCopyNuke" title="仅复制兼容的全局 Grade；启用 Keyer/CC 时请导出参数包或 PNG">复制全局 Grade</button>
+      <button id="btnPickDir" title="Edge/Chrome 支持直接选择项目导出目录，批量导出免逐个确认">选择保存目录</button>
+      <button id="btnExportOne" class="primary" disabled>导出当前 PNG</button>
+      <button id="btnExportAll" class="success" disabled>批量导出全部</button>
+    </div>
+  </header>
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar-left">
+    <!-- Reference Image -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">1. 场景光影参考图 (Ref)</div>
+        <button id="btnClearRoi" class="small ghost" style="display:none;">清除框选</button>
+      </div>
+      <div id="refDrop" class="dropzone">
+        <div class="dropzone-hint">拖入或点击上传 <strong>场景参考图</strong><br/>如：场景_航拍雪山空镜_暴风雪.png</div>
+        <input id="refInput" type="file" accept="image/*" hidden />
+      </div>
+      <div id="refBox" class="ref-box" title="按住鼠标左键拖动可框选局部区域作为采样目标">
+        <canvas id="refCanvas"></canvas>
+      </div>
+      <div id="refMeta" class="ref-meta" style="display:none;">
+        <span id="refName" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <div class="swatches" title="参考图采样出的 暗部 / 中间调 / 亮部 代表色">
+          <div id="swDark" class="swatch"></div>
+          <div id="swMid" class="swatch"></div>
+          <div id="swHigh" class="swatch"></div>
+        </div>
+      </div>
+      <div id="refRoiTip" class="ref-roi-tip" style="display:none;">提示：可在上方参考图上<strong>鼠标拉框</strong>，只采样框内光影</div>
+    </div>
+
+    <!-- Assets Queue -->
+    <div class="section" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+      <div class="section-head">
+        <div class="section-title">2. 待调色资产图 (<span id="assetCount">0</span>)</div>
+        <button id="btnApplyAll" class="small ghost" disabled title="把当前选中的调色参数同步到队列里的全部资产图">同步给全部</button>
+      </div>
+      <div id="assetDrop" class="dropzone">
+        <div class="dropzone-hint">一次拖入或点击多选 <strong>资产图</strong><br/>支持服装 / 角色肖像 / 道具 PNG</div>
+        <input id="assetInput" type="file" accept="image/*" multiple hidden />
+      </div>
+      <div id="assetList" class="asset-list"></div>
+    </div>
+  </aside>
+
+  <!-- CENTER VIEWPORT -->
+  <main class="viewport-wrap">
+    <div class="vp-toolbar">
+      <div class="vp-group">
+        <button id="viewWipe" class="small active">分屏拉杆 (Wipe)</button>
+        <button id="viewSide" class="small">与参考图并排</button>
+        <button id="viewFinal" class="small">纯成品</button>
+        <button id="btnHoldOrig" class="small" title="按住鼠标或按住键盘 Space 瞬时查看原图">按住看原图 (Space)</button>
+      </div>
+      <div class="vp-group">
+        <button id="btnZoomFit" class="small">适应窗口</button>
+        <button id="btnZoom100" class="small">1:1</button>
+        <span id="zoomLabel" style="font-family:var(--font-mono);font-size:11px;color:var(--text-2);min-width:42px;text-align:right;">100%</span>
+      </div>
+    </div>
+
+    <div id="vpStage" class="vp-stage">
+      <div id="vpEmpty" class="vp-empty">
+        <h3>拖入「场景参考图」和「资产图」开始</h3>
+        <p>
+          1. 左侧上方拖入目标场景图（如 <b>上山前暴风雪</b>）<br/>
+          2. 左侧下方拖入待调色资产图（可一次多选 4 张）<br/>
+          3. 右侧选 <b>服装</b> 或 <b>人像保肤</b> → 点击 <b>一键自动匹配</b><br/>
+          4. 或直接使用右侧已内置的 <b>凌云渡实测预设</b>，满意后一键导出原分辨率 PNG
+        </p>
+      </div>
+      <canvas id="mainCanvas" style="display:none;"></canvas>
+      <div id="badgeLeft" class="vp-badge left">原图</div>
+      <div id="badgeRight" class="vp-badge right">调色后 (Linear Grade)</div>
+    </div>
+
+    <div class="vp-status">
+      <span id="statusImg">未加载资产图</span>
+      <span id="statusPixel">移动鼠标查看 sRGB / Linear 像素值 · 滚轮缩放 · Shift+拖动平移</span>
+    </div>
+  </main>
+
+  <!-- RIGHT INSPECTOR -->
+  <aside class="sidebar-right">
+    <!-- Auto Match -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">3. 一键自动匹配（按参考图）</div>
+      </div>
+      <div class="mode-grid">
+        <button class="mode-btn active" data-mode="costume">
+          <span>服装 / 道具</span><small>强融合环境色</small>
+        </button>
+        <button class="mode-btn" data-mode="portrait">
+          <span>人像保肤</span><small>防人脸发青</small>
+        </button>
+        <button class="mode-btn" data-mode="tint">
+          <span>轻度色偏</span><small>保持原明度</small>
+        </button>
+      </div>
+      <button id="btnAutoMatch" class="primary match-big-btn" disabled>⚡ 一键自动匹配参考图</button>
+      <div class="hint-tiny">自动排除资产图四周纯白/纯灰棚拍背景，在线性空间精准计算 Nuke Grade 参数。</div>
+    </div>
+
+    <!-- Built-in & Custom Presets -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">4. 参数包与场次预设</div>
+        <div class="row-flex">
+          <button id="btnSavePreset" class="small">存为预设</button>
+          <button id="btnExportPreset" class="small ghost" title="导出队列中每张图的 Grade、Keyer、CC 参数">导出参数</button>
+          <button id="btnImportPreset" class="small ghost" title="导入参数包，有文件名的参数将自动套用到对应图片">导入参数</button>
+          <input id="presetFileInput" type="file" accept=".json" hidden />
+        </div>
+      </div>
+      <div class="row-flex">
+        <select id="presetSelect"></select>
+        <button id="btnApplyPreset" class="small">套用</button>
+      </div>
+      <button id="btnApplyNamedPreset" class="small" style="width:100%;margin-top:7px;" disabled>按图片文件名一键套用</button>
+      <div class="hint-tiny">先载入图片，再导入参数包，即可按文件名套用；只导入到网页的图片不会自动传给他人。</div>
+    </div>
+
+    <!-- Quick Visual Sliders -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">5. 直觉微调（实时联动 Grade）</div>
+        <button id="btnResetQuick" class="small ghost">归零微调</button>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>匹配强度 (Mix)</span><span class="ctrl-val" id="valMix" data-reset="mix">100%</span></div>
+        <input type="range" id="slMix" min="0" max="1" step="0.01" value="1" />
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>整体亮度 (Exposure EV)</span><span class="ctrl-val" id="valExp" data-reset="exp">0.00</span></div>
+        <input type="range" id="slExp" min="-1.8" max="1.8" step="0.02" value="0" />
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>暗部压深 / 提亮 (Shadow Lift)</span><span class="ctrl-val" id="valLift" data-reset="lift">0.000</span></div>
+        <input type="range" id="slLift" min="-0.03" max="0.04" step="0.001" value="0" />
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>中间调冷暖 (冷蓝 ← → 暖黄)</span><span class="ctrl-val" id="valTemp" data-reset="temp">0</span></div>
+        <input type="range" id="slTemp" min="-50" max="50" step="1" value="0" />
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>明暗反差 (Gamma 整体)</span><span class="ctrl-val" id="valCont" data-reset="cont">0.00</span></div>
+        <input type="range" id="slCont" min="-0.35" max="0.35" step="0.01" value="0" />
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>饱和度 (Saturation)</span><span class="ctrl-val" id="valSat" data-reset="sat">1.00</span></div>
+        <input type="range" id="slSat" min="0" max="1.6" step="0.02" value="1" />
+      </div>
+    </div>
+
+    <!-- Nuke Native Grade Parameters -->
+    <div class="section">
+      <details class="nuke-details" open>
+        <summary>
+          <span>6. Nuke 原生 Grade 参数（Linear）</span>
+          <span style="font-size:11px;color:var(--text-2);font-weight:400;">展开/收起 ▾</span>
+        </summary>
+        <div id="nukeParamsContainer"></div>
+        <div class="check-row">
+          <label><input type="checkbox" id="chkBlackClamp" checked /> black clamp</label>
+          <label><input type="checkbox" id="chkWhiteClamp" /> white clamp</label>
+        </div>
+        <div class="check-row"><label title="Keyer 关闭时按全图处理"><input type="checkbox" id="gradeUseKeyer" /> Grade 只调整 Keyer 选区</label></div>
+        <button id="btnCopyNuke2" class="small" style="width:100%;">复制全局 Grade 节点代码</button>
+      </details>
+    </div>
+
+    <div class="section">
+      <details class="nuke-details">
+        <summary><span>Keyer · 选取明暗 / 颜色范围</span><span>展开 ▾</span></summary>
+        <div class="check-row"><label><input type="checkbox" id="keyEnabled" /> 启用 Keyer</label><label><input type="checkbox" id="keyInvert" /> 反选</label></div>
+        <div class="row-flex"><span>依据：</span><select id="keyOperation"><option value="luminance">亮度</option><option value="red">红通道</option><option value="green">绿通道</option><option value="blue">蓝通道</option><option value="saturation">饱和度</option><option value="max">最大通道</option><option value="min">最小通道</option><option value="redscreen">红幕</option><option value="greenscreen">绿幕</option><option value="bluescreen">蓝幕</option></select></div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:9px;">
+          <label>A 起点<input id="keyA" type="number" step="0.01" style="width:100%;" /></label>
+          <label>B 全选<input id="keyB" type="number" step="0.01" style="width:100%;" /></label>
+          <label>C 全选<input id="keyC" type="number" step="0.01" style="width:100%;" /></label>
+          <label>D 终点<input id="keyD" type="number" step="0.01" style="width:100%;" /></label>
+        </div>
+        <div class="hint-tiny">范围使用线性数值，A ≤ B ≤ C ≤ D；B 到 C 全选，两侧渐变。白色为选中，黑色不选。</div>
+        <div class="row-flex" style="margin-top:8px;"><button id="btnShowKey" class="small">查看黑白选区</button><button id="btnResetKey" class="small ghost">重置 Keyer</button></div>
+        <div class="check-row"><label><input type="checkbox" id="keyExportAlpha" /> 将选区用于导出透明度</label></div>
+        <div class="hint-tiny">默认保留原背景。透明度选项仅在启用 Keyer 后生效；查看选区不会把 PNG 导出成黑白图。</div>
+      </details>
+    </div>
+
+    <div class="section">
+      <details class="nuke-details">
+        <summary><span>CC · ColorCorrect 局部修正</span><span>展开 ▾</span></summary>
+        <div class="check-row"><label><input type="checkbox" id="ccEnabled" /> 启用 CC</label><label><input type="checkbox" id="ccUseKeyer" /> 只调整 Keyer 选区</label></div>
+        <div class="row-flex"><span>调节范围：</span><select id="ccBand"><option value="master">整体 Master</option><option value="shadows">暗部 Shadows</option><option value="midtones">中间调 Midtones</option><option value="highlights">亮部 Highlights</option></select><button id="btnResetCC" class="small ghost">重置 CC</button></div>
+        <div id="ccParamsContainer" style="margin-top:9px;"></div>
+        <div class="ctrl-row"><div class="ctrl-label"><span>CC 强度</span><span id="valCCMix">100%</span></div><input id="ccMix" type="range" min="0" max="1" step="0.01" value="1" /></div>
+        <div class="hint-tiny">Grade 后执行 CC；支持各范围的饱和度、对比度、Gamma、RGB 增益和偏移。Keyer 关闭时按全图处理。</div>
+      </details>
+    </div>
+
+    <!-- Export Settings -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">7. 导出设置（原分辨率无损 sRGB PNG）</div>
+      </div>
+      <div class="row-flex">
+        <span style="font-size:11.5px;color:var(--text-2);white-space:nowrap;">文件名后缀：</span>
+        <input type="text" id="exportSuffix" value="_上山前暴风雪" />
+      </div>
+      <div id="dirPill" class="dir-pill"></div>
+      <div class="hint-tiny">原尺寸 PNG；所选目录中若有同名文件，自动加编号。浏览器默认下载目录按浏览器自身规则保存。</div>
+    </div>
+  </aside>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* =========================================================
+   * 1. Exact sRGB <-> Linear Math (IEC 61966-2-1, matches Nuke Default)
+   * ========================================================= */
+  const SRGB_TO_LIN = new Float32Array(256);
+  for (let i = 0; i < 256; i++) {
+    const c = i / 255;
+    SRGB_TO_LIN[i] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+
+  const LUT_SIZE = 4096;
+  const LIN_TO_SRGB_LUT = new Uint8Array(LUT_SIZE + 1);
+  for (let i = 0; i <= LUT_SIZE; i++) {
+    const c = i / LUT_SIZE;
+    const s = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    LIN_TO_SRGB_LUT[i] = Math.max(0, Math.min(255, Math.round(s * 255)));
+  }
+
+  function linToSrgbByteFast(v) {
+    if (v <= 0) return 0;
+    if (v >= 1) return 255;
+    return LIN_TO_SRGB_LUT[(v * LUT_SIZE + 0.5) | 0];
+  }
+
+  function linToSrgbByteExact(v) {
+    if (v <= 0) return 0;
+    if (v >= 1) return 255;
+    const s = v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+    return Math.max(0, Math.min(255, Math.round(s * 255)));
+  }
+
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+  /* =========================================================
+   * 2. Built-in Presets (Verified on 凌云渡 Assets in Linear Space)
+   * ========================================================= */
+  function defaultGrade() {
+    return {
+      blackpoint: [0, 0, 0],
+      whitepoint: [1, 1, 1],
+      lift: [0, 0, 0],
+      gain: [1, 1, 1],
+      multiply: [1, 1, 1],
+      offset: [0, 0, 0],
+      gamma: [1, 1, 1],
+      blackClamp: true,
+      whiteClamp: false
+    };
+  }
+
+  function defaultQuick() {
+    return { mix: 1, exp: 0, lift: 0, temp: 0, cont: 0, sat: 1 };
+  }
+
+  const CC_BANDS = ['master', 'shadows', 'midtones', 'highlights'];
+  const CC_FIELDS = [
+    { key: 'saturation', label: '饱和度 Saturation', def: 1, step: 0.01 },
+    { key: 'contrast', label: '对比度 Contrast', def: 1, step: 0.01 },
+    { key: 'gamma', label: 'Gamma', def: 1, step: 0.01 },
+    { key: 'gain', label: '增益 Gain', def: 1, step: 0.01 },
+    { key: 'offset', label: '偏移 Offset', def: 0, step: 0.001 }
+  ];
+  const KEY_OPERATIONS = ['luminance', 'red', 'green', 'blue', 'saturation', 'max', 'min', 'redscreen', 'greenscreen', 'bluescreen'];
+
+  function defaultKeyer() {
+    return { enabled: false, operation: 'luminance', range: [0, 1, 1, 1], invert: false, exportAlpha: false };
+  }
+
+  function defaultCC() {
+    const cc = { enabled: false, useKeyer: false, mix: 1 };
+    for (const band of CC_BANDS) {
+      cc[band] = {};
+      for (const field of CC_FIELDS) cc[band][field.key] = [field.def, field.def, field.def];
+    }
+    return cc;
+  }
+
+  function copyKeyer(keyer = defaultKeyer()) {
+    return { ...keyer, range: [...keyer.range] };
+  }
+
+  function copyCC(cc = defaultCC()) {
+    const result = { enabled: cc.enabled, useKeyer: cc.useKeyer, mix: cc.mix };
+    for (const band of CC_BANDS) {
+      result[band] = {};
+      for (const field of CC_FIELDS) result[band][field.key] = [...cc[band][field.key]];
+    }
+    return result;
+  }
+
+  function parameterVector(value, fallback, name) {
+    const result = value === undefined ? [...fallback] : value;
+    if (!Array.isArray(result) || result.length !== fallback.length ||
+        !result.every(v => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 10000)) {
+      throw new Error(name + ' 必须是有限的数值数组');
+    }
+    return [...result];
+  }
+
+  function normalizePreset(preset, index = 0) {
+    if (!preset || typeof preset !== 'object' || !preset.grade || typeof preset.grade !== 'object' || Array.isArray(preset.grade)) throw new Error('缺少 Grade 参数');
+    for (const key of ['quick', 'keyer', 'cc']) {
+      if (preset[key] !== undefined && (!preset[key] || typeof preset[key] !== 'object' || Array.isArray(preset[key]))) throw new Error(key + ' 格式无效');
+    }
+    for (const [object, keys] of [[preset.grade, ['blackClamp','whiteClamp']], [preset.keyer, ['enabled','invert','exportAlpha']], [preset.cc, ['enabled','useKeyer']], [preset, ['gradeMask']]]) {
+      for (const key of keys) if (object?.[key] !== undefined && typeof object[key] !== 'boolean') throw new Error(key + ' 必须为 true 或 false');
+    }
+    const grade = defaultGrade();
+    for (const key of ['blackpoint', 'whitepoint', 'lift', 'gain', 'multiply', 'offset', 'gamma']) {
+      grade[key] = parameterVector(preset.grade[key], grade[key], key);
+    }
+    if (grade.gamma.some(v => v <= 0)) throw new Error('Grade Gamma 必须大于 0');
+    grade.blackClamp = preset.grade.blackClamp === undefined ? true : !!preset.grade.blackClamp;
+    grade.whiteClamp = !!preset.grade.whiteClamp;
+    const quick = { ...defaultQuick() };
+    for (const key of Object.keys(quick)) {
+      if (preset.quick && preset.quick[key] !== undefined) quick[key] = preset.quick[key];
+      if (typeof quick[key] !== 'number' || !Number.isFinite(quick[key]) || Math.abs(quick[key]) > 100) throw new Error('无效微调参数：' + key);
+    }
+    if (quick.mix < 0 || quick.mix > 1 || quick.sat < 0 || quick.sat > 2 || quick.cont <= -1 || quick.exp < -10 || quick.exp > 10) throw new Error('微调参数超出范围');
+    const keyer = { ...defaultKeyer(), ...(preset.keyer || {}) };
+    keyer.enabled = !!keyer.enabled;
+    keyer.invert = !!keyer.invert;
+    keyer.exportAlpha = !!keyer.exportAlpha;
+    keyer.range = parameterVector(keyer.range, [0, 1, 1, 1], 'Keyer 范围');
+    if (!KEY_OPERATIONS.includes(keyer.operation) || keyer.range.some((v, i, arr) => i && v < arr[i - 1])) throw new Error('Keyer 范围须满足 A ≤ B ≤ C ≤ D');
+    const cc = defaultCC();
+    if (preset.cc) {
+      cc.enabled = !!preset.cc.enabled;
+      cc.useKeyer = !!preset.cc.useKeyer;
+      if (preset.cc.mix !== undefined) cc.mix = preset.cc.mix;
+      if (typeof cc.mix !== 'number' || !Number.isFinite(cc.mix) || cc.mix < 0 || cc.mix > 1) throw new Error('CC 强度须在 0 到 1 之间');
+      for (const band of CC_BANDS) for (const field of CC_FIELDS) {
+        cc[band][field.key] = parameterVector(preset.cc[band]?.[field.key], cc[band][field.key], 'CC ' + field.key);
+        if (field.key === 'gamma' && cc[band].gamma.some(v => v <= 0)) throw new Error('CC Gamma 必须大于 0');
+        if (['contrast', 'saturation'].includes(field.key) && cc[band][field.key].some(v => v < 0)) throw new Error('CC 对比度和饱和度不能为负数');
+      }
+    }
+    const files = preset.files === undefined ? [] : preset.files;
+    if (!Array.isArray(files) || !files.every(f => typeof f === 'string' && f.length > 0 && f.length < 512)) throw new Error('图片文件名列表无效');
+    return {
+      id: typeof preset.id === 'string' && preset.id ? preset.id : 'import_' + Date.now() + '_' + index,
+      name: typeof preset.name === 'string' && preset.name ? preset.name : '导入参数 ' + (index + 1),
+      mode: ['costume', 'portrait', 'tint'].includes(preset.mode) ? preset.mode : 'costume',
+      suffix: typeof preset.suffix === 'string' ? preset.suffix : '_调色',
+      files: [...files], grade, quick, keyer, cc, gradeMask: !!preset.gradeMask
+    };
+  }
+
+  function cloneGrade(g) {
+    return {
+      blackpoint: [...g.blackpoint],
+      whitepoint: [...g.whitepoint],
+      lift: [...g.lift],
+      gain: [...g.gain],
+      multiply: [...g.multiply],
+      offset: [...g.offset],
+      gamma: [...g.gamma],
+      blackClamp: !!g.blackClamp,
+      whiteClamp: !!g.whiteClamp
+    };
+  }
+
+  const BUILTIN_PRESETS = [
+    {
+      id: 'b_storm_xr_cloth',
+      name: '【内置实测】01 上山前暴风雪 · 夏仁服装',
+      mode: 'costume',
+      suffix: '_上山前暴风雪',
+      grade: {
+        blackpoint: [0.02, 0.02, 0.02],
+        whitepoint: [1, 1, 1],
+        lift: [0.002, 0.006, 0.013],
+        gain: [0.48, 0.56, 0.66],
+        multiply: [1, 1, 1],
+        offset: [0, 0, 0],
+        gamma: [0.76, 0.86, 0.96],
+        blackClamp: true, whiteClamp: false
+      },
+      quick: defaultQuick()
+    },
+    {
+      id: 'b_storm_lxy_cloth',
+      name: '【内置实测】01 上山前暴风雪 · 凌小莹服装',
+      mode: 'costume',
+      suffix: '_上山前暴风雪',
+      grade: {
+        blackpoint: [0.04, 0.04, 0.04],
+        whitepoint: [1, 1, 1],
+        lift: [0.002, 0.006, 0.014],
+        gain: [0.45, 0.55, 0.67],
+        multiply: [1, 1, 1],
+        offset: [0, 0, 0],
+        gamma: [0.72, 0.84, 0.98],
+        blackClamp: true, whiteClamp: false
+      },
+      quick: defaultQuick()
+    },
+    {
+      id: 'b_storm_xr_face',
+      name: '【内置实测】01 上山前暴风雪 · 夏仁肖像(保肤)',
+      mode: 'portrait',
+      suffix: '_上山前暴风雪',
+      grade: {
+        blackpoint: [0.003, 0.003, 0.003],
+        whitepoint: [1, 1, 1],
+        lift: [0.003, 0.007, 0.014],
+        gain: [0.56, 0.68, 0.82],
+        multiply: [1, 1, 1],
+        offset: [0, 0, 0],
+        gamma: [0.84, 0.92, 1.02],
+        blackClamp: true, whiteClamp: false
+      },
+      quick: defaultQuick()
+    },
+    {
+      id: 'b_storm_lxy_face',
+      name: '【内置实测】01 上山前暴风雪 · 凌小莹肖像(保肤)',
+      mode: 'portrait',
+      suffix: '_上山前暴风雪',
+      grade: {
+        blackpoint: [0.003, 0.003, 0.003],
+        whitepoint: [1, 1, 1],
+        lift: [0.003, 0.007, 0.014],
+        gain: [0.54, 0.67, 0.83],
+        multiply: [1, 1, 1],
+        offset: [0, 0, 0],
+        gamma: [0.82, 0.91, 1.03],
+        blackClamp: true, whiteClamp: false
+      },
+      quick: defaultQuick()
+    },
+    {
+      id: 'b_sunny_cloth',
+      name: '【内置参考】02 上山后雪后初晴 · 服装通透版',
+      mode: 'costume',
+      suffix: '_上山后初晴',
+      grade: {
+        blackpoint: [0, 0, 0],
+        whitepoint: [1, 1, 1],
+        lift: [0.006, 0.012, 0.022],
+        gain: [0.97, 0.98, 1.02],
+        multiply: [1, 1, 1],
+        offset: [0, 0, 0],
+        gamma: [0.98, 1.01, 1.06],
+        blackClamp: true, whiteClamp: false
+      },
+      quick: defaultQuick()
+    },
+    {
+      id: 'b_sunny_face',
+      name: '【内置参考】02 上山后雪后初晴 · 人像清透版',
+      mode: 'portrait',
+      suffix: '_上山后初晴',
+      grade: {
+        blackpoint: [0, 0, 0],
+        whitepoint: [1, 1, 1],
+        lift: [0.005, 0.010, 0.018],
+        gain: [0.98, 0.99, 1.03],
+        multiply: [1, 1, 1],
+        offset: [0, 0, 0],
+        gamma: [1.02, 1.03, 1.06],
+        blackClamp: true, whiteClamp: false
+      },
+      quick: defaultQuick()
+    }
+  ];
+
+  const STORAGE_KEY = 'lyd_asset_grade_custom_presets_v1';
+  let customPresets = [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const stored = JSON.parse(raw);
+      if (Array.isArray(stored)) customPresets = stored.map(normalizePreset);
+    }
+  } catch (_) {}
+
+  /* =========================================================
+   * 3. App State
+   * ========================================================= */
+  const state = {
+    ref: null, // { name, img, width, height, prevW, prevH, prevCanvas, roi: null | {x,y,w,h} }
+    assets: [], // [{ id, name, img, width, height, thumbUrl, prevW, prevH, linRGB, alpha, origBytes, grade, quick, mode, matched }]
+    activeId: null,
+    viewMode: 'wipe', // 'wipe' | 'side' | 'final'
+    wipePos: 0.5,
+    holdOrig: false,
+    showKey: false,
+    importedPresets: [],
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+    dirHandle: null,
+    exporting: false
+  };
+
+  /* =========================================================
+   * 4. DOM Elements
+   * ========================================================= */
+  const $ = id => document.getElementById(id);
+  const el = {
+    refDrop: $('refDrop'), refInput: $('refInput'), refBox: $('refBox'),
+    refCanvas: $('refCanvas'), refMeta: $('refMeta'), refName: $('refName'),
+    swDark: $('swDark'), swMid: $('swMid'), swHigh: $('swHigh'),
+    refRoiTip: $('refRoiTip'), btnClearRoi: $('btnClearRoi'),
+    assetDrop: $('assetDrop'), assetInput: $('assetInput'),
+    assetList: $('assetList'), assetCount: $('assetCount'), btnApplyAll: $('btnApplyAll'),
+    vpStage: $('vpStage'), vpEmpty: $('vpEmpty'), mainCanvas: $('mainCanvas'),
+    badgeLeft: $('badgeLeft'), badgeRight: $('badgeRight'),
+    statusImg: $('statusImg'), statusPixel: $('statusPixel'), zoomLabel: $('zoomLabel'),
+    viewWipe: $('viewWipe'), viewSide: $('viewSide'), viewFinal: $('viewFinal'),
+    btnHoldOrig: $('btnHoldOrig'), btnZoomFit: $('btnZoomFit'), btnZoom100: $('btnZoom100'),
+    btnAutoMatch: $('btnAutoMatch'),
+    presetSelect: $('presetSelect'), btnApplyPreset: $('btnApplyPreset'),
+    btnSavePreset: $('btnSavePreset'), btnExportPreset: $('btnExportPreset'),
+    btnImportPreset: $('btnImportPreset'), presetFileInput: $('presetFileInput'),
+    slMix: $('slMix'), slExp: $('slExp'), slLift: $('slLift'),
+    slTemp: $('slTemp'), slCont: $('slCont'), slSat: $('slSat'),
+    valMix: $('valMix'), valExp: $('valExp'), valLift: $('valLift'),
+    valTemp: $('valTemp'), valCont: $('valCont'), valSat: $('valSat'),
+    btnResetQuick: $('btnResetQuick'),
+    nukeParamsContainer: $('nukeParamsContainer'),
+    chkBlackClamp: $('chkBlackClamp'), chkWhiteClamp: $('chkWhiteClamp'),
+    btnReset: $('btnReset'), btnCopyNuke: $('btnCopyNuke'), btnCopyNuke2: $('btnCopyNuke2'),
+    btnPickDir: $('btnPickDir'), btnExportOne: $('btnExportOne'), btnExportAll: $('btnExportAll'),
+    exportSuffix: $('exportSuffix'), dirPill: $('dirPill'), toast: $('toast'),
+    gradeUseKeyer: $('gradeUseKeyer'), btnApplyNamedPreset: $('btnApplyNamedPreset'),
+    keyEnabled: $('keyEnabled'), keyInvert: $('keyInvert'), keyOperation: $('keyOperation'),
+    keyRange: [$('keyA'), $('keyB'), $('keyC'), $('keyD')], keyExportAlpha: $('keyExportAlpha'),
+    btnShowKey: $('btnShowKey'), btnResetKey: $('btnResetKey'),
+    ccEnabled: $('ccEnabled'), ccUseKeyer: $('ccUseKeyer'), ccBand: $('ccBand'),
+    ccParamsContainer: $('ccParamsContainer'), ccMix: $('ccMix'), valCCMix: $('valCCMix'), btnResetCC: $('btnResetCC')
+  };
+
+  const mainCtx = el.mainCanvas.getContext('2d', { willReadFrequently: true });
+  const refCtx = el.refCanvas.getContext('2d', { willReadFrequently: true });
+
+  let toastTimer = null;
+  function showToast(msg) {
+    el.toast.textContent = msg;
+    el.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.toast.classList.remove('show'), 2400);
+  }
+
+  function getActiveAsset() {
+    return state.assets.find(a => a.id === state.activeId) || null;
+  }
+
+  /* =========================================================
+   * 5. Effective Grade Calculation (Folds Quick Sliders into Single Nuke Grade)
+   * ========================================================= */
+  function computeEffectiveGrade(baseGrade, quick) {
+    const expMul = Math.pow(2, quick.exp);
+    const tempShift = quick.temp / 100; // -0.5 .. +0.5
+    // Warm increases R gamma & slightly lowers B gamma; Cool does opposite
+    const gTempR = 1 + tempShift * 0.28;
+    const gTempB = 1 - tempShift * 0.28;
+    const gCont = 1 + quick.cont; // >1 lifts midtones, <1 deepens midtones
+
+    const out = cloneGrade(baseGrade);
+    for (let c = 0; c < 3; c++) {
+      out.multiply[c] = +(baseGrade.multiply[c] * expMul).toFixed(5);
+      out.lift[c] = +(baseGrade.lift[c] + quick.lift).toFixed(5);
+    }
+    out.gamma[0] = +clamp(baseGrade.gamma[0] * gTempR * gCont, 0.15, 3.0).toFixed(5);
+    out.gamma[1] = +clamp(baseGrade.gamma[1] * gCont, 0.15, 3.0).toFixed(5);
+    out.gamma[2] = +clamp(baseGrade.gamma[2] * gTempB * gCont, 0.15, 3.0).toFixed(5);
+    out.mix = clamp(quick.mix, 0, 1);
+    out.sat = clamp(quick.sat, 0, 2);
+    return out;
+  }
+
+  function precomputeGradeCoeffs(eg) {
+    const A = [0, 0, 0];
+    const B = [0, 0, 0];
+    const invG = [1, 1, 1];
+    for (let c = 0; c < 3; c++) {
+      const denom = eg.whitepoint[c] - eg.blackpoint[c];
+      A[c] = eg.multiply[c] * (denom === 0 ? 10000 : (eg.gain[c] - eg.lift[c]) / denom);
+      B[c] = eg.offset[c] + eg.lift[c] - A[c] * eg.blackpoint[c];
+      invG[c] = 1.0 / Math.max(0.05, eg.gamma[c]);
+    }
+    return { A, B, invG, blackClamp: eg.blackClamp, whiteClamp: eg.whiteClamp, mix: eg.mix, sat: eg.sat };
+  }
+
+  function applyPixelGrade(r0, g0, b0, co) {
+    let r = co.A[0] * r0 + co.B[0];
+    let g = co.A[1] * g0 + co.B[1];
+    let b = co.A[2] * b0 + co.B[2];
+
+    if (co.blackClamp) {
+      if (r < 0) r = 0;
+      if (g < 0) g = 0;
+      if (b < 0) b = 0;
+    }
+    if (co.whiteClamp) {
+      if (r > 1) r = 1;
+      if (g > 1) g = 1;
+      if (b > 1) b = 1;
+    }
+
+    r = gradePower(r, co.invG[0]);
+    g = gradePower(g, co.invG[1]);
+    b = gradePower(b, co.invG[2]);
+
+    if (Math.abs(co.sat - 1) > 1e-4) {
+      // Rec.709 linear luma (Nuke default Saturation node)
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      r = lum + (r - lum) * co.sat;
+      g = lum + (g - lum) * co.sat;
+      b = lum + (b - lum) * co.sat;
+      if (co.blackClamp) {
+        if (r < 0) r = 0;
+        if (g < 0) g = 0;
+        if (b < 0) b = 0;
+      }
+    }
+
+    if (co.mix < 0.9999) {
+      const m = co.mix, im = 1 - m;
+      r = r0 * im + r * m;
+      g = g0 * im + g * m;
+      b = b0 * im + b * m;
+    }
+    return [r, g, b];
+  }
+
+  function gradePower(value, exponent) {
+    if (value <= 0 || exponent === 1) return value;
+    return value < 1 ? Math.pow(value, exponent) : 1 + (value - 1) * exponent;
+  }
+
+  function luminance(r, g, b) {
+    return 0.2125 * r + 0.7154 * g + 0.0721 * b;
+  }
+
+  function keyerValue(r, g, b, keyer) {
+    if (!keyer.enabled) return 1;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let value;
+    switch (keyer.operation) {
+      case 'red': value = r; break;
+      case 'green': value = g; break;
+      case 'blue': value = b; break;
+      case 'saturation': value = max > 0 ? (max - min) / max : 0; break;
+      case 'max': value = max; break;
+      case 'min': value = min; break;
+      case 'redscreen': value = 1 - Math.max(0, r - Math.max(g, b)); break;
+      case 'greenscreen': value = 1 - Math.max(0, g - Math.max(r, b)); break;
+      case 'bluescreen': value = 1 - Math.max(0, b - Math.max(r, g)); break;
+      default: value = luminance(r, g, b);
+    }
+    const [a, b1, c, d] = keyer.range;
+    let mask = 0;
+    if (value >= a && value <= d) {
+      const rise = value >= b1 || b1 === a ? 1 : (value - a) / (b1 - a);
+      const fall = value <= c || c === d ? 1 : (d - value) / (d - c);
+      mask = clamp(Math.min(rise, fall), 0, 1);
+    }
+    return keyer.invert ? 1 - mask : mask;
+  }
+
+  function smoothRange(value, low, high) {
+    const t = clamp((value - low) / (high - low), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+
+  function prepareCC(cc) {
+    if (!cc.enabled) return null;
+    const pivots = [0.04, 0.18, 0.65];
+    return CC_BANDS.slice(1).map((band, index) => {
+      const result = { power: [], factor: [], saturation: [], offset: [] };
+      for (let c = 0; c < 3; c++) {
+        const contrast = cc[band].contrast[c], masterContrast = cc.master.contrast[c];
+        const inverseGamma = clamp(1 / (cc[band].gamma[c] * cc.master.gamma[c]), 0, 1000);
+        result.power[c] = clamp(contrast * masterContrast * inverseGamma, 0, 1000);
+        result.factor[c] = Math.pow(pivots[index], clamp((1 - contrast) * masterContrast * inverseGamma, -1000, 1000)) *
+          Math.pow(0.18, clamp((1 - masterContrast) * inverseGamma, -1000, 1000)) * cc[band].gain[c] * cc.master.gain[c];
+        result.saturation[c] = cc[band].saturation[c] * cc.master.saturation[c];
+        result.offset[c] = cc[band].offset[c] + cc.master.offset[c];
+      }
+      return result;
+    });
+  }
+
+  function applyCC(rgb, ranges) {
+    const lum = luminance(...rgb);
+    const shadow = 1 - smoothRange(lum, 0, 0.09), highlight = smoothRange(lum, 0.5, 1);
+    const weights = [shadow, 1 - shadow - highlight, highlight];
+    return rgb.map((value, c) => {
+      let output = 0;
+      for (let band = 0; band < 3; band++) {
+        if (weights[band] === 0) continue;
+        const settings = ranges[band];
+        const saturated = value * settings.saturation[c] + lum * (1 - settings.saturation[c]);
+        const powered = saturated > 0 ? Math.pow(saturated, settings.power[c]) : saturated;
+        output += (powered * settings.factor[c] + settings.offset[c]) * weights[band];
+      }
+      return output;
+    });
+  }
+
+  function preparePipeline(asset) {
+    const cc = asset.cc || defaultCC();
+    return {
+      grade: precomputeGradeCoeffs(computeEffectiveGrade(asset.grade, asset.quick)),
+      keyer: asset.keyer || defaultKeyer(), gradeMask: !!asset.gradeMask,
+      cc: prepareCC(cc), ccMix: cc.mix, ccMask: cc.useKeyer
+    };
+  }
+
+  function applyPixelNodes(r, g, b, pipeline) {
+    const mask = keyerValue(r, g, b, pipeline.keyer);
+    let rgb = applyPixelGrade(r, g, b, pipeline.grade);
+    if (pipeline.gradeMask && pipeline.keyer.enabled) rgb = rgb.map((value, c) => [r, g, b][c] * (1 - mask) + value * mask);
+    if (pipeline.cc) {
+      const corrected = applyCC(rgb, pipeline.cc);
+      const mix = pipeline.ccMix * (pipeline.ccMask && pipeline.keyer.enabled ? mask : 1);
+      rgb = rgb.map((value, c) => mix === 0 ? value : value * (1 - mix) + corrected[c] * mix);
+    }
+    return [...rgb, mask];
+  }
+
+  /* =========================================================
+   * 6. Smart Image Statistics & Auto-Match Engine (Linear Space)
+   * ========================================================= */
+  function percentileSorted(arr, p) {
+    if (!arr.length) return 0;
+    const idx = Math.min(arr.length - 1, Math.max(0, Math.floor(arr.length * p)));
+    return arr[idx];
+  }
+
+  function sampleRefStats() {
+    if (!state.ref) return null;
+    const { prevCanvas, prevW, prevH, roi } = state.ref;
+    const ctx = prevCanvas.getContext('2d', { willReadFrequently: true });
+    const data = ctx.getImageData(0, 0, prevW, prevH).data;
+
+    let x0 = 0, y0 = 0, x1 = prevW, y1 = prevH;
+    if (roi && roi.w > 0.02 && roi.h > 0.02) {
+      x0 = Math.floor(roi.x * prevW);
+      y0 = Math.floor(roi.y * prevH);
+      x1 = Math.ceil((roi.x + roi.w) * prevW);
+      y1 = Math.ceil((roi.y + roi.h) * prevH);
+    }
+
+    const step = Math.max(1, Math.floor(Math.sqrt(((x1 - x0) * (y1 - y0)) / 18000)));
+    const rs = [], gs = [], bs = [];
+    for (let y = y0; y < y1; y += step) {
+      for (let x = x0; x < x1; x += step) {
+        const i = (y * prevW + x) * 4;
+        if (data[i + 3] < 20) continue;
+        rs.push(SRGB_TO_LIN[data[i]]);
+        gs.push(SRGB_TO_LIN[data[i + 1]]);
+        bs.push(SRGB_TO_LIN[data[i + 2]]);
+      }
+    }
+    rs.sort((a, b) => a - b);
+    gs.sort((a, b) => a - b);
+    bs.sort((a, b) => a - b);
+
+    const pick = p => [percentileSorted(rs, p), percentileSorted(gs, p), percentileSorted(bs, p)];
+    return {
+      p04: pick(0.04),
+      p15: pick(0.15),
+      p40: pick(0.40),
+      p50: pick(0.50),
+      p85: pick(0.85),
+      p94: pick(0.94)
+    };
+  }
+
+  function sampleAssetStats(asset) {
+    const { prevW, prevH, linRGB, alpha } = asset;
+    // Detect uniform studio border color (top/bottom/left/right 3% margin)
+    const bR = [], bG = [], bB = [];
+    const mx = Math.max(2, Math.floor(prevW * 0.03));
+    const my = Math.max(2, Math.floor(prevH * 0.03));
+    const bStep = Math.max(1, Math.floor(Math.max(prevW, prevH) / 160));
+    for (let y = 0; y < prevH; y += bStep) {
+      for (let x = 0; x < prevW; x += bStep) {
+        if (x < mx || x >= prevW - mx || y < my || y >= prevH - my) {
+          const p = y * prevW + x;
+          if (alpha[p] < 20) continue;
+          const idx = p * 3;
+          bR.push(linRGB[idx]); bG.push(linRGB[idx + 1]); bB.push(linRGB[idx + 2]);
+        }
+      }
+    }
+    let hasUniformBg = false;
+    let bg = [0, 0, 0];
+    if (bR.length > 20) {
+      bR.sort((a, b) => a - b); bG.sort((a, b) => a - b); bB.sort((a, b) => a - b);
+      bg = [percentileSorted(bR, 0.5), percentileSorted(bG, 0.5), percentileSorted(bB, 0.5)];
+      const spread = (percentileSorted(bR, 0.85) - percentileSorted(bR, 0.15)) +
+                     (percentileSorted(bG, 0.85) - percentileSorted(bG, 0.15)) +
+                     (percentileSorted(bB, 0.85) - percentileSorted(bB, 0.15));
+      // Studio white or studio grey backdrop usually has very tight border spread & low saturation
+      const bgSat = Math.max(...bg) - Math.min(...bg);
+      if (spread < 0.22 && bgSat < 0.08 && bg[1] > 0.08) hasUniformBg = true;
+    }
+
+    const step = Math.max(1, Math.floor(Math.sqrt((prevW * prevH) / 22000)));
+    const rs = [], gs = [], bs = [];
+    const allR = [], allG = [], allB = [];
+    let skinCount = 0, totalFg = 0;
+
+    for (let y = 0; y < prevH; y += step) {
+      for (let x = 0; x < prevW; x += step) {
+        const p = y * prevW + x;
+        if (alpha[p] < 20) continue;
+        const idx = p * 3;
+        const r = linRGB[idx], g = linRGB[idx + 1], b = linRGB[idx + 2];
+        allR.push(r); allG.push(g); allB.push(b);
+
+        if (hasUniformBg) {
+          const d = Math.abs(r - bg[0]) + Math.abs(g - bg[1]) + Math.abs(b - bg[2]);
+          if (d < 0.11) continue;
+        }
+        rs.push(r); gs.push(g); bs.push(b);
+        totalFg++;
+        if (r > g * 1.18 && g > b * 1.08 && r > 0.08 && r < 0.88) skinCount++;
+      }
+    }
+
+    const useFg = rs.length > allR.length * 0.08;
+    const R = useFg ? rs : allR, G = useFg ? gs : allG, B = useFg ? bs : allB;
+    R.sort((a, b) => a - b); G.sort((a, b) => a - b); B.sort((a, b) => a - b);
+    const pick = p => [percentileSorted(R, p), percentileSorted(G, p), percentileSorted(B, p)];
+    return {
+      p04: pick(0.04),
+      p25: pick(0.25),
+      p50: pick(0.50),
+      p85: pick(0.85),
+      p95: pick(0.95),
+      hasUniformBg,
+      bgLuma: 0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2],
+      skinRatio: totalFg > 0 ? skinCount / totalFg : 0
+    };
+  }
+
+  function computeAutoMatchGrade(asset, mode) {
+    const refS = sampleRefStats();
+    const srcS = sampleAssetStats(asset);
+    if (!refS || !srcS) return defaultGrade();
+
+    const g = defaultGrade();
+    const luma = rgb => 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+
+    const refLowL = Math.max(0.002, luma(refS.p04));
+    const refMidL = Math.max(0.02, luma(refS.p40));
+    const refHighL = Math.max(0.15, luma(refS.p94));
+
+    const srcLowL = luma(srcS.p04);
+    const srcMidL = Math.max(0.04, luma(srcS.p50));
+    const srcHighL = Math.max(0.25, luma(srcS.p95));
+
+    // Normalized RGB chromaticity of reference at shadows, midtones, highlights
+    const normChrom = rgb => {
+      const m = Math.max(0.001, luma(rgb));
+      return [rgb[0] / m, rgb[1] / m, rgb[2] / m];
+    };
+    const refChromLow = normChrom(refS.p04);
+    const refChromMid = normChrom(refS.p40);
+    const refChromHigh = normChrom(refS.p94);
+    const srcChromMid = normChrom(srcS.p50);
+    const srcChromHigh = normChrom(srcS.p95);
+
+    if (mode === 'tint') {
+      // Preserve asset brightness, transfer chromaticity cleanly
+      const liftFloor = clamp(refLowL * 0.45, 0.001, 0.015);
+      for (let c = 0; c < 3; c++) {
+        g.lift[c] = +clamp(liftFloor * refChromLow[c], 0, 0.025).toFixed(4);
+        const hiRatio = clamp(refChromHigh[c] / Math.max(0.5, srcChromHigh[c]), 0.78, 1.24);
+        g.gain[c] = +(0.96 * hiRatio).toFixed(4);
+        const midRatio = clamp(refChromMid[c] / Math.max(0.5, srcChromMid[c]), 0.72, 1.32);
+        // Gamma shifts midtone color smoothly without crushing white/black
+        g.gamma[c] = +clamp(Math.pow(midRatio, 0.55), 0.78, 1.25).toFixed(4);
+      }
+      return g;
+    }
+
+    const isPortrait = mode === 'portrait';
+
+    // 1. Blackpoint: gently anchor high-key white studio costumes so shadows have weight
+    const bpVal = (!isPortrait && srcLowL > 0.05)
+      ? clamp((srcLowL - 0.02) * 0.28, 0.005, 0.055)
+      : clamp(srcLowL * 0.25, 0.0, 0.012);
+    g.blackpoint = [+bpVal.toFixed(4), +bpVal.toFixed(4), +bpVal.toFixed(4)];
+
+    // 2. Lift: carry the reference shadow color cast (restrained to avoid milky haze)
+    const liftStrength = isPortrait ? 0.65 : 0.72;
+    const liftCap = isPortrait ? 0.022 : 0.026;
+    for (let c = 0; c < 3; c++) {
+      g.lift[c] = +clamp(refS.p04[c] * liftStrength, 0.0, liftCap).toFixed(4);
+    }
+
+    // 3. Gain: match highlight ceiling & highlight color balance
+    // Portraits keep slightly brighter highlights (~+15%) so faces remain legible
+    const targetHighL = isPortrait
+      ? clamp(refHighL * 1.18, 0.48, 1.05)
+      : clamp(refHighL * 1.02, 0.36, 1.05);
+    const baseGainL = clamp(targetHighL / Math.max(0.45, srcHighL), 0.42, 1.22);
+
+    for (let c = 0; c < 3; c++) {
+      const refC = refChromHigh[c];
+      // For portrait, neutralize source skin warm bias partially instead of over-canceling skin
+      const srcC = isPortrait ? (1.0 * 0.75 + srcChromHigh[c] * 0.25) : srcChromHigh[c];
+      const chromScale = clamp(refC / Math.max(0.65, srcC), 0.76, 1.28);
+      const blendChrom = isPortrait ? (1 + (chromScale - 1) * 0.75) : chromScale;
+      g.gain[c] = +clamp(baseGainL * blendChrom, 0.32, 1.35).toFixed(4);
+    }
+
+    // 4. Gamma: match midtone brightness + midtone color cast (with skin protection in portrait mode)
+    // Expected midtone after linear gain
+    const projMidL = clamp(srcMidL * baseGainL, 0.02, 0.92);
+    const desiredMidL = isPortrait
+      ? clamp(srcMidL * 0.62 + refMidL * 0.38, 0.09, 0.55)
+      : clamp(srcMidL * 0.35 + refMidL * 0.65, 0.06, 0.62);
+
+    // Solve projMidL^(1/gamma) = desiredMidL => gamma = ln(projMidL) / ln(desiredMidL)
+    let baseGamma = Math.log(projMidL) / Math.log(Math.max(0.015, Math.min(0.95, desiredMidL)));
+    baseGamma = clamp(baseGamma, isPortrait ? 0.80 : 0.68, 1.22);
+
+    const midTintStrength = isPortrait ? 0.38 : 0.62;
+    for (let c = 0; c < 3; c++) {
+      const targetChrom = refChromMid[c];
+      // For costumes, cancel warm creamy bias; for portraits, preserve natural skin warmth
+      const cancelSrc = isPortrait ? 1.0 : clamp(srcChromMid[c], 0.88, 1.15);
+      const rel = clamp(targetChrom / cancelSrc, 0.55, 1.65);
+      const gammaTilt = Math.pow(rel, midTintStrength * 0.52);
+      g.gamma[c] = +clamp(baseGamma * gammaTilt, 0.58, 1.38).toFixed(4);
+    }
+
+    return g;
+  }
+
+  /* =========================================================
+   * 7. Image Loading & Preview Buffers
+   * ========================================================= */
+  function loadFileAsImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = e => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
+  async function setReferenceFile(file) {
+    try {
+      const img = await loadFileAsImage(file);
+      const maxPrev = 900;
+      const scale = Math.min(1, maxPrev / Math.max(img.width, img.height));
+      const prevW = Math.max(1, Math.round(img.width * scale));
+      const prevH = Math.max(1, Math.round(img.height * scale));
+      const prevCanvas = document.createElement('canvas');
+      prevCanvas.width = prevW; prevCanvas.height = prevH;
+      prevCanvas.getContext('2d').drawImage(img, 0, 0, prevW, prevH);
+
+      state.ref = { name: file.name, sourceFile: file, img, width: img.width, height: img.height, prevW, prevH, prevCanvas, roi: null };
+      drawRefPreview();
+      updateRefSwatches();
+      el.refBox.classList.add('has-img');
+      el.refMeta.style.display = 'flex';
+      el.refRoiTip.style.display = 'block';
+      el.btnClearRoi.style.display = 'none';
+      el.refName.textContent = `${file.name} (${img.width}×${img.height})`;
+      updateButtons();
+      if (state.viewMode === 'side') renderViewport();
+      showToast(`已载入参考图：${file.name}`);
+    } catch (e) {
+      showToast('参考图加载失败，请检查文件格式');
+    }
+  }
+
+  function drawRefPreview() {
+    if (!state.ref) return;
+    const { prevCanvas, prevW, prevH, roi } = state.ref;
+    el.refCanvas.width = prevW;
+    el.refCanvas.height = prevH;
+    refCtx.drawImage(prevCanvas, 0, 0);
+    if (roi && roi.w > 0.01 && roi.h > 0.01) {
+      refCtx.fillStyle = 'rgba(0,0,0,0.45)';
+      refCtx.fillRect(0, 0, prevW, prevH);
+      const rx = roi.x * prevW, ry = roi.y * prevH, rw = roi.w * prevW, rh = roi.h * prevH;
+      refCtx.drawImage(prevCanvas, rx, ry, rw, rh, rx, ry, rw, rh);
+      refCtx.strokeStyle = '#4c8dff';
+      refCtx.lineWidth = Math.max(2, prevW / 240);
+      refCtx.strokeRect(rx, ry, rw, rh);
+    }
+  }
+
+  function updateRefSwatches() {
+    const s = sampleRefStats();
+    if (!s) return;
+    const toCss = rgb => `rgb(${linToSrgbByteFast(rgb[0])},${linToSrgbByteFast(rgb[1])},${linToSrgbByteFast(rgb[2])})`;
+    el.swDark.style.background = toCss(s.p04);
+    el.swMid.style.background = toCss(s.p40);
+    el.swHigh.style.background = toCss(s.p94);
+  }
+
+  async function addAssetFiles(files) {
+    const list = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (!list.length) return;
+    for (const file of list) {
+      const img = await loadFileAsImage(file);
+      const maxPrev = 1360;
+      const scale = Math.min(1, maxPrev / Math.max(img.width, img.height));
+      const prevW = Math.max(1, Math.round(img.width * scale));
+      const prevH = Math.max(1, Math.round(img.height * scale));
+      const c = document.createElement('canvas');
+      c.width = prevW; c.height = prevH;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, prevW, prevH);
+      const imgData = ctx.getImageData(0, 0, prevW, prevH);
+      const px = imgData.data;
+      const count = prevW * prevH;
+      const linRGB = new Float32Array(count * 3);
+      const alpha = new Uint8Array(count);
+      for (let i = 0, j = 0; i < count; i++, j += 4) {
+        linRGB[i * 3] = SRGB_TO_LIN[px[j]];
+        linRGB[i * 3 + 1] = SRGB_TO_LIN[px[j + 1]];
+        linRGB[i * 3 + 2] = SRGB_TO_LIN[px[j + 2]];
+        alpha[i] = px[j + 3];
+      }
+
+      // Tiny thumbnail
+      const tc = document.createElement('canvas');
+      tc.width = 88; tc.height = 88;
+      const tctx = tc.getContext('2d');
+      const tr = Math.max(88 / img.width, 88 / img.height);
+      const tw = img.width * tr, th = img.height * tr;
+      tctx.drawImage(img, (88 - tw) / 2, (88 - th) / 2, tw, th);
+
+      // Guess portrait mode if vertical aspect ratio or portrait filename
+      const isLikelyPortrait = (img.height > img.width * 1.1) || /肖像|人物|头像|夏仁\.|凌小莹\.|大师姐\./.test(file.name);
+
+      const item = {
+        id: 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        name: file.name,
+        sourceFile: file,
+        img, width: img.width, height: img.height,
+        thumbUrl: tc.toDataURL('image/jpeg', 0.8),
+        prevW, prevH,
+        linRGB, alpha,
+        origBytes: new Uint8ClampedArray(px),
+        grade: defaultGrade(),
+        quick: defaultQuick(),
+        keyer: defaultKeyer(), cc: defaultCC(), gradeMask: false,
+        mode: isLikelyPortrait ? 'portrait' : 'costume',
+        matched: false
+      };
+      state.assets.push(item);
+      state.activeId = item.id;
+    }
+    renderAssetList();
+    syncUIFromActive();
+    fitZoom();
+    renderViewport();
+    updateButtons();
+    showToast(`已载入 ${list.length} 张资产图`);
+  }
+
+  /* =========================================================
+   * 8. Rendering Viewport (Wipe / Side-by-Side / Final)
+   * ========================================================= */
+  let cachedGradedBytes = null;
+  let cachedAssetId = null;
+
+  function computeGradedPreviewBytes(asset) {
+    const pipeline = preparePipeline(asset);
+    const count = asset.prevW * asset.prevH;
+    const out = new Uint8ClampedArray(count * 4);
+    const lin = asset.linRGB;
+    const alp = asset.alpha;
+    for (let i = 0, j = 0; i < count; i++, j += 4) {
+      const base = i * 3;
+      const [r, g, b, mask] = applyPixelNodes(lin[base], lin[base + 1], lin[base + 2], pipeline);
+      if (state.showKey && !state.holdOrig) {
+        out[j] = out[j + 1] = out[j + 2] = Math.round(mask * 255);
+        out[j + 3] = 255;
+        continue;
+      }
+      out[j] = linToSrgbByteFast(r);
+      out[j + 1] = linToSrgbByteFast(g);
+      out[j + 2] = linToSrgbByteFast(b);
+      out[j + 3] = Math.round(alp[i] * (pipeline.keyer.enabled && pipeline.keyer.exportAlpha ? mask : 1));
+    }
+    return out;
+  }
+
+  let rafPending = false;
+  function scheduleRender() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => {
+      rafPending = false;
+      renderViewport();
+    });
+  }
+
+  function renderViewport() {
+    const asset = getActiveAsset();
+    if (!asset) {
+      el.vpEmpty.style.display = 'block';
+      el.mainCanvas.style.display = 'none';
+      el.badgeLeft.style.display = 'none';
+      el.badgeRight.style.display = 'none';
+      el.statusImg.textContent = '未加载资产图';
+      return;
+    }
+
+    el.vpEmpty.style.display = 'none';
+    el.mainCanvas.style.display = 'block';
+    const w = asset.prevW, h = asset.prevH;
+    cachedGradedBytes = computeGradedPreviewBytes(asset);
+    cachedAssetId = asset.id;
+
+    if (state.showKey && !state.holdOrig) {
+      el.mainCanvas.width = w;
+      el.mainCanvas.height = h;
+      mainCtx.putImageData(new ImageData(cachedGradedBytes, w, h), 0, 0);
+      el.badgeLeft.style.display = 'none';
+      el.badgeRight.style.display = 'block';
+      el.badgeRight.textContent = 'Keyer 选区 · 白色选中 / 黑色不选';
+    } else if (state.viewMode === 'side' && state.ref) {
+      // Side-by-side: Ref on left, Graded Asset on right (same height h)
+      const refDrawW = Math.max(1, Math.round(state.ref.prevW * (h / state.ref.prevH)));
+      const gap = 8;
+      el.mainCanvas.width = refDrawW + gap + w;
+      el.mainCanvas.height = h;
+      mainCtx.fillStyle = '#0c0e12';
+      mainCtx.fillRect(0, 0, el.mainCanvas.width, h);
+      mainCtx.drawImage(state.ref.prevCanvas, 0, 0, refDrawW, h);
+      const imgData = new ImageData(state.holdOrig ? asset.origBytes : cachedGradedBytes, w, h);
+      mainCtx.putImageData(imgData, refDrawW + gap, 0);
+
+      el.badgeLeft.textContent = '场景参考图 (Ref)';
+      el.badgeRight.textContent = state.holdOrig ? '资产原图' : '调色后资产';
+      el.badgeLeft.style.display = 'block';
+      el.badgeRight.style.display = 'block';
+    } else {
+      el.mainCanvas.width = w;
+      el.mainCanvas.height = h;
+      if (state.holdOrig) {
+        mainCtx.putImageData(new ImageData(asset.origBytes, w, h), 0, 0);
+        el.badgeLeft.textContent = '原图 (松开恢复)';
+        el.badgeLeft.style.display = 'block';
+        el.badgeRight.style.display = 'none';
+      } else if (state.viewMode === 'wipe') {
+        const splitX = Math.round(w * state.wipePos);
+        const mixed = new Uint8ClampedArray(w * h * 4);
+        const orig = asset.origBytes;
+        const grad = cachedGradedBytes;
+        for (let y = 0; y < h; y++) {
+          const rowStart = y * w * 4;
+          const splitOff = rowStart + splitX * 4;
+          const rowEnd = rowStart + w * 4;
+          mixed.set(orig.subarray(rowStart, splitOff), rowStart);
+          mixed.set(grad.subarray(splitOff, rowEnd), splitOff);
+        }
+        mainCtx.putImageData(new ImageData(mixed, w, h), 0, 0);
+        // Draw crisp wipe line + handle
+        mainCtx.strokeStyle = 'rgba(255,255,255,0.85)';
+        mainCtx.lineWidth = Math.max(1.5, w / 600);
+        mainCtx.beginPath();
+        mainCtx.moveTo(splitX + 0.5, 0);
+        mainCtx.lineTo(splitX + 0.5, h);
+        mainCtx.stroke();
+
+        const cy = h / 2, rad = Math.max(12, Math.min(20, w / 55));
+        mainCtx.fillStyle = '#4c8dff';
+        mainCtx.beginPath();
+        mainCtx.arc(splitX, cy, rad, 0, Math.PI * 2);
+        mainCtx.fill();
+        mainCtx.strokeStyle = '#fff';
+        mainCtx.lineWidth = 2;
+        mainCtx.stroke();
+        mainCtx.fillStyle = '#fff';
+        mainCtx.font = `bold ${Math.round(rad * 0.9)}px sans-serif`;
+        mainCtx.textAlign = 'center';
+        mainCtx.textBaseline = 'middle';
+        mainCtx.fillText('⇄', splitX, cy + 0.5);
+
+        el.badgeLeft.textContent = '原图';
+        el.badgeRight.textContent = '调色后 (Linear Grade)';
+        el.badgeLeft.style.display = 'block';
+        el.badgeRight.style.display = 'block';
+      } else {
+        mainCtx.putImageData(new ImageData(cachedGradedBytes, w, h), 0, 0);
+        el.badgeLeft.style.display = 'none';
+        el.badgeRight.textContent = '纯成品 (sRGB)';
+        el.badgeRight.style.display = 'block';
+      }
+    }
+
+    applyCanvasTransform();
+    el.statusImg.textContent = `${asset.name}  |  原始尺寸 ${asset.width}×${asset.height}  |  导出模式: 8-bit sRGB PNG`;
+  }
+
+  function applyCanvasTransform() {
+    el.mainCanvas.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+    el.zoomLabel.textContent = Math.round(state.zoom * 100) + '%';
+  }
+
+  function fitZoom() {
+    const asset = getActiveAsset();
+    if (!asset) return;
+    const rect = el.vpStage.getBoundingClientRect();
+    let cw = asset.prevW, ch = asset.prevH;
+    if (state.viewMode === 'side' && state.ref) {
+      cw = Math.round(state.ref.prevW * (ch / state.ref.prevH)) + 8 + cw;
+    }
+    const pad = 32;
+    state.zoom = Math.min((rect.width - pad) / cw, (rect.height - pad) / ch, 1.5);
+    state.panX = 0; state.panY = 0;
+    applyCanvasTransform();
+  }
+
+  /* =========================================================
+   * 9. Nuke Native Parameter Panel & UI Sync
+   * ========================================================= */
+  const NUKE_FIELDS = [
+    { key: 'blackpoint', label: 'blackpoint', step: 0.002, def: 0 },
+    { key: 'whitepoint', label: 'whitepoint', step: 0.01, def: 1 },
+    { key: 'lift', label: 'lift (black)', step: 0.001, def: 0 },
+    { key: 'gain', label: 'gain (white)', step: 0.01, def: 1 },
+    { key: 'multiply', label: 'multiply', step: 0.01, def: 1 },
+    { key: 'offset', label: 'offset (add)', step: 0.002, def: 0 },
+    { key: 'gamma', label: 'gamma', step: 0.01, def: 1 }
+  ];
+
+  const nukeInputs = {};
+  const ccInputs = {};
+
+  function buildCCPanel() {
+    for (const field of CC_FIELDS) {
+      const row = document.createElement('div');
+      row.className = 'nuke-param';
+      const label = document.createElement('div');
+      label.className = 'nuke-param-head';
+      label.textContent = field.label;
+      row.appendChild(label);
+      const cells = document.createElement('div');
+      cells.className = 'rgb-inputs';
+      ccInputs[field.key] = [];
+      for (let channel = 0; channel < 3; channel++) {
+        const cell = document.createElement('label');
+        cell.className = 'rgb-cell ' + 'rgb'[channel];
+        const caption = document.createElement('span');
+        caption.textContent = 'RGB'[channel];
+        const input = document.createElement('input');
+        input.type = 'number'; input.step = field.step;
+        input.setAttribute('aria-label', 'CC ' + field.label + ' ' + 'RGB'[channel]);
+        input.addEventListener('input', () => {
+          const asset = getActiveAsset(), value = Number(input.value);
+          if (!asset || input.value.trim() === '' || !Number.isFinite(value) || Math.abs(value) > 10000) return;
+          if ((field.key === 'gamma' && value <= 0) || (['contrast', 'saturation'].includes(field.key) && value < 0)) {
+            showToast('Gamma 须大于 0；对比度和饱和度不能为负数'); return;
+          }
+          asset.cc[el.ccBand.value][field.key][channel] = value;
+          asset.matched = true;
+          renderAssetList(); scheduleRender();
+        });
+        cell.append(caption, input); cells.appendChild(cell);
+        ccInputs[field.key].push(input);
+      }
+      row.appendChild(cells); el.ccParamsContainer.appendChild(row);
+    }
+  }
+
+  function syncNodeUI(asset) {
+    const keyer = asset?.keyer || defaultKeyer(), cc = asset?.cc || defaultCC();
+    el.keyEnabled.checked = keyer.enabled; el.keyInvert.checked = keyer.invert;
+    el.keyOperation.value = keyer.operation; el.keyExportAlpha.checked = keyer.exportAlpha;
+    el.keyRange.forEach((input, i) => { if (document.activeElement !== input) input.value = keyer.range[i]; });
+    el.gradeUseKeyer.checked = !!asset?.gradeMask;
+    el.ccEnabled.checked = cc.enabled; el.ccUseKeyer.checked = cc.useKeyer;
+    el.ccMix.value = cc.mix; el.valCCMix.textContent = Math.round(cc.mix * 100) + '%';
+    for (const field of CC_FIELDS) ccInputs[field.key].forEach((input, i) => {
+      if (document.activeElement !== input) input.value = Number(cc[el.ccBand.value][field.key][i].toFixed(5));
+      input.disabled = !asset;
+    });
+    el.btnShowKey.textContent = state.showKey ? '返回调色画面' : '查看黑白选区';
+  }
+
+  function applyPresetToAsset(asset, preset) {
+    asset.grade = cloneGrade(preset.grade);
+    asset.quick = { ...defaultQuick(), ...(preset.quick || {}) };
+    asset.keyer = copyKeyer(preset.keyer);
+    asset.cc = copyCC(preset.cc);
+    asset.gradeMask = !!preset.gradeMask;
+    if (preset.mode) asset.mode = preset.mode;
+    asset.matched = true;
+  }
+
+  function presetForAsset(asset, name = asset.name) {
+    return {
+      id: 'asset_' + asset.id, name, files: [asset.name], mode: asset.mode,
+      suffix: el.exportSuffix.value || '_调色',
+      grade: cloneGrade(asset.grade), quick: { ...asset.quick },
+      keyer: copyKeyer(asset.keyer), cc: copyCC(asset.cc), gradeMask: !!asset.gradeMask
+    };
+  }
+
+  function applyNamedPresets() {
+    const presets = state.importedPresets.length ? state.importedPresets : customPresets;
+    let applied = 0, ambiguous = 0;
+    const names = state.assets.map(a => a.name.normalize('NFC').toLowerCase());
+    for (const asset of state.assets) {
+      const name = asset.name.normalize('NFC').toLowerCase();
+      if (names.filter(item => item === name).length > 1) { ambiguous++; continue; }
+      const matches = presets.filter(p => p.files?.some(name => name.normalize('NFC').toLowerCase() === asset.name.normalize('NFC').toLowerCase()));
+      if (matches.length > 1) { ambiguous++; continue; }
+      if (matches.length === 1) {
+        applyPresetToAsset(asset, matches[0]);
+        el.exportSuffix.value = matches[0].suffix;
+        applied++;
+      }
+    }
+    state.showKey = false;
+    syncUIFromActive(); renderAssetList(); renderViewport();
+    showToast('已按文件名套用 ' + applied + ' 张；未匹配 ' + (state.assets.length - applied - ambiguous) + ' 张' + (ambiguous ? '；重名参数冲突 ' + ambiguous + ' 张，未套用' : ''));
+    return applied;
+  }
+
+  function buildNukePanel() {
+    el.nukeParamsContainer.innerHTML = '';
+    for (const f of NUKE_FIELDS) {
+      const wrap = document.createElement('div');
+      wrap.className = 'nuke-param';
+      wrap.innerHTML = `
+        <div class="nuke-param-head">
+          <span>${f.label}</span>
+          <span style="color:var(--text-2);cursor:pointer;" data-nuke-reset="${f.key}" title="重置该项为默认值">↺</span>
+        </div>
+        <div class="rgb-inputs">
+          <div class="rgb-cell r"><span>R</span><input type="number" step="${f.step}" data-key="${f.key}" data-ch="0" /></div>
+          <div class="rgb-cell g"><span>G</span><input type="number" step="${f.step}" data-key="${f.key}" data-ch="1" /></div>
+          <div class="rgb-cell b"><span>B</span><input type="number" step="${f.step}" data-key="${f.key}" data-ch="2" /></div>
+        </div>
+      `;
+      el.nukeParamsContainer.appendChild(wrap);
+      nukeInputs[f.key] = Array.from(wrap.querySelectorAll('input'));
+    }
+
+    el.nukeParamsContainer.addEventListener('input', e => {
+      const inp = e.target;
+      if (inp.tagName !== 'INPUT') return;
+      const asset = getActiveAsset();
+      if (!asset) return;
+      const key = inp.dataset.key;
+      const ch = Number(inp.dataset.ch);
+      const val = parseFloat(inp.value);
+      if (!Number.isFinite(val) || Math.abs(val) > 10000 || (key === 'gamma' && val <= 0)) return;
+      // Commit quick tweaks into base grade first if user edits raw Nuke fields directly
+      bakeQuickIntoBase(asset);
+      asset.grade[key][ch] = val;
+      asset.matched = true;
+      renderAssetList();
+      scheduleRender();
+    });
+
+    el.nukeParamsContainer.addEventListener('click', e => {
+      const key = e.target.dataset.nukeReset;
+      if (!key) return;
+      const asset = getActiveAsset();
+      if (!asset) return;
+      const field = NUKE_FIELDS.find(x => x.key === key);
+      bakeQuickIntoBase(asset);
+      asset.grade[key] = [field.def, field.def, field.def];
+      syncUIFromActive();
+      scheduleRender();
+    });
+  }
+
+  function bakeQuickIntoBase(asset) {
+    const q = asset.quick;
+    if (q.exp === 0 && q.lift === 0 && q.temp === 0 && q.cont === 0) return;
+    const eg = computeEffectiveGrade(asset.grade, q);
+    asset.grade = cloneGrade(eg);
+    asset.quick.exp = 0;
+    asset.quick.lift = 0;
+    asset.quick.temp = 0;
+    asset.quick.cont = 0;
+    syncQuickSliders(asset);
+  }
+
+  function syncQuickSliders(asset) {
+    const q = asset ? asset.quick : defaultQuick();
+    el.slMix.value = q.mix; el.valMix.textContent = Math.round(q.mix * 100) + '%';
+    el.slExp.value = q.exp; el.valExp.textContent = (q.exp >= 0 ? '+' : '') + q.exp.toFixed(2);
+    el.slLift.value = q.lift; el.valLift.textContent = (q.lift >= 0 ? '+' : '') + q.lift.toFixed(3);
+    el.slTemp.value = q.temp; el.valTemp.textContent = (q.temp > 0 ? '+' : '') + q.temp;
+    el.slCont.value = q.cont; el.valCont.textContent = (q.cont >= 0 ? '+' : '') + q.cont.toFixed(2);
+    el.slSat.value = q.sat; el.valSat.textContent = q.sat.toFixed(2);
+  }
+
+  function syncNukeInputs(asset) {
+    const eg = asset ? computeEffectiveGrade(asset.grade, asset.quick) : defaultGrade();
+    for (const f of NUKE_FIELDS) {
+      const arr = eg[f.key];
+      nukeInputs[f.key].forEach((inp, idx) => {
+        if (document.activeElement !== inp) {
+          inp.value = Number(arr[idx]).toFixed(4).replace(/\.?0+$/, '') || '0';
+        }
+      });
+    }
+    el.chkBlackClamp.checked = eg.blackClamp;
+    el.chkWhiteClamp.checked = eg.whiteClamp;
+  }
+
+  function syncModeButtons(mode) {
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+  }
+
+  function syncUIFromActive() {
+    const asset = getActiveAsset();
+    syncQuickSliders(asset);
+    syncNukeInputs(asset);
+    syncNodeUI(asset);
+    syncModeButtons(asset ? asset.mode : 'costume');
+  }
+
+  function renderAssetList() {
+    el.assetCount.textContent = state.assets.length;
+    el.assetList.innerHTML = '';
+    for (const a of state.assets) {
+      const div = document.createElement('div');
+      div.className = 'asset-item' + (a.id === state.activeId ? ' active' : '');
+      const modeLabel = a.mode === 'portrait' ? '人像' : (a.mode === 'tint' ? '色偏' : '服装');
+      const safeLabel = a.name.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+      div.innerHTML = `
+        <img class="asset-thumb" src="${a.thumbUrl}" alt="" />
+        <div class="asset-info">
+          <div class="asset-name" title="${safeLabel}">${safeLabel}</div>
+          <div class="asset-sub">
+            <span class="tag-dot ${a.matched ? 'matched' : ''}"></span>
+            <span>${a.width}×${a.height}</span>
+            <span>· ${modeLabel}</span>
+          </div>
+        </div>
+        <button class="asset-del" title="移除">×</button>
+      `;
+      div.addEventListener('click', e => {
+        if (e.target.classList.contains('asset-del')) {
+          state.assets = state.assets.filter(x => x.id !== a.id);
+          if (state.activeId === a.id) state.activeId = state.assets[0]?.id || null;
+          renderAssetList();
+          syncUIFromActive();
+          fitZoom();
+          renderViewport();
+          updateButtons();
+          return;
+        }
+        state.activeId = a.id;
+        renderAssetList();
+        syncUIFromActive();
+        fitZoom();
+        renderViewport();
+      });
+      el.assetList.appendChild(div);
+    }
+  }
+
+  function updateButtons() {
+    const hasAsset = state.assets.length > 0;
+    const hasRef = !!state.ref;
+    el.btnAutoMatch.disabled = !(hasAsset && hasRef);
+    el.btnExportOne.disabled = !hasAsset || state.exporting;
+    el.btnExportAll.disabled = !hasAsset || state.exporting;
+    el.btnApplyAll.disabled = state.assets.length < 2;
+    el.btnApplyNamedPreset.disabled = !hasAsset || !(state.importedPresets.length ? state.importedPresets : customPresets).some(p => p.files?.length);
+    el.btnShowKey.disabled = !hasAsset;
+  }
+
+  function renderPresetSelect() {
+    el.presetSelect.innerHTML = '';
+    const g1 = document.createElement('optgroup');
+    g1.label = '凌云渡 · 内置实测预设';
+    for (const p of BUILTIN_PRESETS) {
+      const opt = document.createElement('option');
+      opt.value = p.id; opt.textContent = p.name;
+      g1.appendChild(opt);
+    }
+    el.presetSelect.appendChild(g1);
+
+    if (customPresets.length) {
+      const g2 = document.createElement('optgroup');
+      g2.label = '我的自定义预设';
+      for (const p of customPresets) {
+        const opt = document.createElement('option');
+        opt.value = p.id; opt.textContent = p.name;
+        g2.appendChild(opt);
+      }
+      el.presetSelect.appendChild(g2);
+    }
+  }
+
+  /* =========================================================
+   * 10. Copy Exact Nuke Node Script (Compatible with Nuke 11–16+)
+   * ========================================================= */
+  function buildNukeSnippet(asset) {
+    const eg = computeEffectiveGrade(asset.grade, asset.quick);
+    if (asset.keyer?.enabled || asset.cc?.enabled || (eg.sat !== 1 && eg.mix < 1)) {
+      throw new Error('当前含 Keyer、CC 或组合混合；请导出参数包或 PNG，单个 Grade 不能完整表示这些效果');
+    }
+    const fmt = arr => `{${arr[0].toFixed(5)} ${arr[1].toFixed(5)} ${arr[2].toFixed(5)} 0}`;
+    const fmt1 = arr => `{${arr[0].toFixed(5)} ${arr[1].toFixed(5)} ${arr[2].toFixed(5)} 1}`;
+    const safeName = asset.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_]/g, '_') || 'Asset';
+    let code = `Grade {\n` +
+      ` blackpoint ${fmt(eg.blackpoint)}\n` +
+      ` whitepoint ${fmt1(eg.whitepoint)}\n` +
+      ` black ${fmt(eg.lift)}\n` +
+      ` white ${fmt1(eg.gain)}\n` +
+      ` multiply ${fmt1(eg.multiply)}\n` +
+      ` add ${fmt(eg.offset)}\n` +
+      ` gamma ${fmt1(eg.gamma)}\n` +
+      ` black_clamp ${eg.blackClamp ? 'true' : 'false'}\n` +
+      ` white_clamp ${eg.whiteClamp ? 'true' : 'false'}\n` +
+      ` mix ${eg.mix.toFixed(4)}\n` +
+      ` name Grade_Match_${safeName}\n` +
+      ` selected true\n` +
+      `}`;
+
+    if (Math.abs(eg.sat - 1) > 1e-4) {
+      code += `\nSaturation {\n saturation ${eg.sat.toFixed(4)}\n name Sat_Match_${safeName}\n selected true\n}`;
+    }
+    return code;
+  }
+
+  async function copyNukeCode() {
+    const asset = getActiveAsset();
+    if (!asset) { showToast('请先载入至少一张资产图'); return; }
+    let code;
+    try { code = buildNukeSnippet(asset); } catch (error) { showToast(error.message); return; }
+    try {
+      await navigator.clipboard.writeText(code);
+      showToast('已复制 Nuke Grade 节点代码！切到 Nuke 按 Ctrl+V 即可粘贴');
+    } catch (_) {
+      const ta = document.createElement('textarea');
+      ta.value = code; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      showToast('已复制 Nuke Grade 节点代码！切到 Nuke 按 Ctrl+V 即可粘贴');
+    }
+  }
+
+  /* =========================================================
+   * 11. Full-Resolution 8-bit sRGB PNG Export (Exact Linear Math)
+   * ========================================================= */
+  function renderFullResBlob(asset) {
+    return new Promise((resolve, reject) => {
+      const w = asset.width, h = asset.height;
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(asset.img, 0, 0, w, h);
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const px = imgData.data;
+
+      const pipeline = preparePipeline(asset);
+
+      for (let i = 0; i < px.length; i += 4) {
+        const r0 = SRGB_TO_LIN[px[i]];
+        const g0 = SRGB_TO_LIN[px[i + 1]];
+        const b0 = SRGB_TO_LIN[px[i + 2]];
+        const [r, g, b, mask] = applyPixelNodes(r0, g0, b0, pipeline);
+        px[i] = linToSrgbByteExact(r);
+        px[i + 1] = linToSrgbByteExact(g);
+        px[i + 2] = linToSrgbByteExact(b);
+        if (pipeline.keyer.enabled && pipeline.keyer.exportAlpha) px[i + 3] = Math.round(px[i + 3] * mask);
+      }
+      ctx.putImageData(imgData, 0, 0);
+      c.toBlob(blob => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/png');
+    });
+  }
+
+  function makeExportName(origName) {
+    const base = origName.replace(/\.[^.]+$/, '');
+    const suf = (el.exportSuffix.value || '').replace(/[\\/:*?"<>|]/g, '').trim() || '_调色';
+    return `${base}${suf}.png`;
+  }
+
+  async function saveBlob(blob, filename) {
+    if (!state.dirHandle && window.dshColorMatch?.saveBlob) {
+      await window.dshColorMatch.saveBlob(blob, filename);
+      return 'dir';
+    }
+    if (state.dirHandle) {
+      const stem = filename.replace(/\.png$/i, '');
+      let index = 1;
+      // shortcut: directory checks are not atomic across tabs; use one exporting tab until concurrent writes are needed.
+      while (true) {
+        try { await state.dirHandle.getFileHandle(filename); }
+        catch (error) { if (error.name === 'NotFoundError') break; throw error; }
+        filename = stem + '_' + index++ + '.png';
+      }
+      const fh = await state.dirHandle.getFileHandle(filename, { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return 'dir';
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    return 'download';
+  }
+
+  async function exportAssets(list) {
+    if (!list.length || state.exporting) return;
+    const jobs = list.map(a => ({
+      asset: { ...a, grade: cloneGrade(a.grade), quick: { ...a.quick }, keyer: copyKeyer(a.keyer), cc: copyCC(a.cc) },
+      filename: makeExportName(a.name)
+    }));
+    state.exporting = true;
+    updateButtons();
+    try {
+      let mode = 'download';
+      for (let idx = 0; idx < jobs.length; idx++) {
+        const a = jobs[idx].asset;
+        showToast(`正在导出原分辨率 PNG (${idx + 1}/${jobs.length})：${a.name}...`);
+        // Yield a frame so toast paints
+        await new Promise(r => setTimeout(r, 20));
+        const blob = await renderFullResBlob(a);
+        mode = await saveBlob(blob, jobs[idx].filename);
+      }
+      showToast(mode === 'dir'
+        ? `导出完成！已保存 ${list.length} 张原分辨率 sRGB PNG 到所选文件夹`
+        : `导出完成！已下载 ${list.length} 张原分辨率 sRGB PNG`);
+    } catch (err) {
+      showToast('导出失败：' + err.message);
+    } finally {
+      state.exporting = false;
+      updateButtons();
+    }
+  }
+
+  /* =========================================================
+   * 12. Events & Interactions
+   * ========================================================= */
+  function wireDropzone(zone, input, onFiles) {
+    zone.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => {
+      if (input.files.length) onFiles(input.files);
+      input.value = '';
+    });
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) onFiles(e.dataTransfer.files);
+    });
+  }
+
+  wireDropzone(el.refDrop, el.refInput, files => setReferenceFile(files[0]));
+  wireDropzone(el.assetDrop, el.assetInput, files => addAssetFiles(files));
+
+  // Reference ROI drag-box selection
+  let roiDrag = null;
+  el.refCanvas.addEventListener('mousedown', e => {
+    if (!state.ref) return;
+    const r = el.refCanvas.getBoundingClientRect();
+    roiDrag = { x0: clamp((e.clientX - r.left) / r.width, 0, 1), y0: clamp((e.clientY - r.top) / r.height, 0, 1) };
+  });
+  window.addEventListener('mousemove', e => {
+    if (!roiDrag || !state.ref) return;
+    const r = el.refCanvas.getBoundingClientRect();
+    const x1 = clamp((e.clientX - r.left) / r.width, 0, 1);
+    const y1 = clamp((e.clientY - r.top) / r.height, 0, 1);
+    state.ref.roi = {
+      x: Math.min(roiDrag.x0, x1),
+      y: Math.min(roiDrag.y0, y1),
+      w: Math.abs(x1 - roiDrag.x0),
+      h: Math.abs(y1 - roiDrag.y0)
+    };
+    drawRefPreview();
+  });
+  window.addEventListener('mouseup', () => {
+    if (!roiDrag || !state.ref) return;
+    roiDrag = null;
+    if (state.ref.roi && (state.ref.roi.w < 0.03 || state.ref.roi.h < 0.03)) {
+      state.ref.roi = null;
+      el.btnClearRoi.style.display = 'none';
+    } else {
+      el.btnClearRoi.style.display = 'inline-flex';
+      showToast('已更新局部采样区域，点「一键自动匹配」生效');
+    }
+    drawRefPreview();
+    updateRefSwatches();
+  });
+  el.btnClearRoi.addEventListener('click', () => {
+    if (!state.ref) return;
+    state.ref.roi = null;
+    el.btnClearRoi.style.display = 'none';
+    drawRefPreview();
+    updateRefSwatches();
+    showToast('已恢复全图采样');
+  });
+
+  // Viewport Wipe Drag + Pan + Zoom + Live Pixel Inspector
+  let vpDragMode = null; // 'wipe' | 'pan'
+  let panStart = { x: 0, y: 0, px: 0, py: 0 };
+
+  el.vpStage.addEventListener('mousedown', e => {
+    const asset = getActiveAsset();
+    if (!asset) return;
+    if (e.button === 1 || e.shiftKey) {
+      vpDragMode = 'pan';
+      panStart = { x: e.clientX, y: e.clientY, px: state.panX, py: state.panY };
+      e.preventDefault();
+      return;
+    }
+    if (e.button === 0 && state.viewMode === 'wipe' && !state.holdOrig) {
+      vpDragMode = 'wipe';
+      updateWipeFromMouse(e);
+    }
+  });
+
+  function updateWipeFromMouse(e) {
+    const r = el.mainCanvas.getBoundingClientRect();
+    if (r.width <= 0) return;
+    state.wipePos = clamp((e.clientX - r.left) / r.width, 0.01, 0.99);
+    scheduleRender();
+  }
+
+  window.addEventListener('mousemove', e => {
+    if (vpDragMode === 'wipe') {
+      updateWipeFromMouse(e);
+    } else if (vpDragMode === 'pan') {
+      state.panX = panStart.px + (e.clientX - panStart.x);
+      state.panY = panStart.py + (e.clientY - panStart.y);
+      applyCanvasTransform();
+    }
+  });
+  window.addEventListener('mouseup', () => { vpDragMode = null; });
+
+  el.vpStage.addEventListener('wheel', e => {
+    if (!getActiveAsset()) return;
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.12 : 0.89;
+    state.zoom = clamp(state.zoom * factor, 0.15, 5.0);
+    applyCanvasTransform();
+  }, { passive: false });
+
+  el.mainCanvas.addEventListener('mousemove', e => {
+    const asset = getActiveAsset();
+    if (!asset || !cachedGradedBytes || cachedAssetId !== asset.id) return;
+    const r = el.mainCanvas.getBoundingClientRect();
+    const cx = Math.floor(((e.clientX - r.left) / r.width) * el.mainCanvas.width);
+    const cy = Math.floor(((e.clientY - r.top) / r.height) * el.mainCanvas.height);
+    if (cx < 0 || cy < 0 || cx >= el.mainCanvas.width || cy >= el.mainCanvas.height) return;
+    const px = mainCtx.getImageData(cx, cy, 1, 1).data;
+    const lr = SRGB_TO_LIN[px[0]], lg = SRGB_TO_LIN[px[1]], lb = SRGB_TO_LIN[px[2]];
+    el.statusPixel.textContent = `sRGB(${px[0]}, ${px[1]}, ${px[2]})  |  Linear(${lr.toFixed(4)}, ${lg.toFixed(4)}, ${lb.toFixed(4)})`;
+  });
+
+  // View mode buttons
+  function setViewMode(m) {
+    state.viewMode = m;
+    el.viewWipe.classList.toggle('active', m === 'wipe');
+    el.viewSide.classList.toggle('active', m === 'side');
+    el.viewFinal.classList.toggle('active', m === 'final');
+    fitZoom();
+    renderViewport();
+  }
+  el.viewWipe.addEventListener('click', () => setViewMode('wipe'));
+  el.viewSide.addEventListener('click', () => {
+    if (!state.ref) showToast('请先载入场景参考图后再使用并排对比');
+    setViewMode('side');
+  });
+  el.viewFinal.addEventListener('click', () => setViewMode('final'));
+  el.btnZoomFit.addEventListener('click', fitZoom);
+  el.btnZoom100.addEventListener('click', () => { state.zoom = 1; state.panX = 0; state.panY = 0; applyCanvasTransform(); });
+
+  el.btnHoldOrig.addEventListener('mousedown', () => { state.holdOrig = true; renderViewport(); });
+  window.addEventListener('mouseup', () => { if (state.holdOrig) { state.holdOrig = false; renderViewport(); } });
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && !state.holdOrig && getActiveAsset()) {
+      e.preventDefault(); state.holdOrig = true; renderViewport();
+    }
+  });
+  window.addEventListener('keyup', e => {
+    if (e.code === 'Space' && state.holdOrig) { state.holdOrig = false; renderViewport(); }
+  });
+
+  // Mode selection
+  function updateNodeSetting(apply) {
+    const asset = getActiveAsset();
+    if (!asset) return;
+    apply(asset); asset.matched = true;
+    syncNodeUI(asset); renderAssetList(); scheduleRender();
+  }
+  el.keyEnabled.addEventListener('change', () => updateNodeSetting(a => { a.keyer.enabled = el.keyEnabled.checked; }));
+  el.keyInvert.addEventListener('change', () => updateNodeSetting(a => { a.keyer.invert = el.keyInvert.checked; }));
+  el.keyOperation.addEventListener('change', () => updateNodeSetting(a => { a.keyer.operation = el.keyOperation.value; }));
+  el.keyExportAlpha.addEventListener('change', () => updateNodeSetting(a => { a.keyer.exportAlpha = el.keyExportAlpha.checked; }));
+  el.gradeUseKeyer.addEventListener('change', () => updateNodeSetting(a => { a.gradeMask = el.gradeUseKeyer.checked; }));
+  el.keyRange.forEach(input => input.addEventListener('change', () => {
+    const values = el.keyRange.map(item => Number(item.value));
+    if (el.keyRange.some(item => item.value.trim() === '') || !values.every(v => Number.isFinite(v) && Math.abs(v) <= 10000) || values.some((v, i) => i && v < values[i - 1])) {
+      showToast('Keyer 范围须为有限数值，并满足 A ≤ B ≤ C ≤ D');
+      const asset = getActiveAsset();
+      if (asset) el.keyRange.forEach((item, i) => { item.value = asset.keyer.range[i]; });
+      return;
+    }
+    updateNodeSetting(a => { a.keyer.range = values; });
+  }));
+  el.btnResetKey.addEventListener('click', () => {
+    state.showKey = false;
+    updateNodeSetting(a => { a.keyer = defaultKeyer(); a.gradeMask = false; });
+  });
+  el.btnShowKey.addEventListener('click', () => {
+    state.showKey = !state.showKey;
+    syncNodeUI(getActiveAsset()); renderViewport();
+  });
+  el.ccEnabled.addEventListener('change', () => updateNodeSetting(a => { a.cc.enabled = el.ccEnabled.checked; }));
+  el.ccUseKeyer.addEventListener('change', () => updateNodeSetting(a => { a.cc.useKeyer = el.ccUseKeyer.checked; }));
+  el.ccMix.addEventListener('input', () => updateNodeSetting(a => { a.cc.mix = Number(el.ccMix.value); }));
+  el.ccBand.addEventListener('change', () => syncNodeUI(getActiveAsset()));
+  el.btnResetCC.addEventListener('click', () => updateNodeSetting(a => { a.cc = defaultCC(); }));
+  el.btnApplyNamedPreset.addEventListener('click', applyNamedPresets);
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const asset = getActiveAsset();
+      const mode = btn.dataset.mode;
+      syncModeButtons(mode);
+      if (asset) { asset.mode = mode; renderAssetList(); }
+    });
+  });
+
+  // Auto Match Button
+  el.btnAutoMatch.addEventListener('click', () => {
+    const asset = getActiveAsset();
+    if (!asset || !state.ref) return;
+    asset.grade = computeAutoMatchGrade(asset, asset.mode);
+    asset.quick = defaultQuick();
+    asset.matched = true;
+    syncUIFromActive();
+    renderAssetList();
+    renderViewport();
+    showToast(`已完成「${asset.mode === 'portrait' ? '人像保肤' : asset.mode === 'tint' ? '轻度色偏' : '服装/道具'}」线性自动匹配`);
+  });
+
+  // Quick Sliders
+  function bindQuick(slider, key, fmt) {
+    slider.addEventListener('input', () => {
+      const asset = getActiveAsset();
+      if (!asset) return;
+      asset.quick[key] = parseFloat(slider.value);
+      asset.matched = true;
+      syncQuickSliders(asset);
+      syncNukeInputs(asset);
+      scheduleRender();
+    });
+  }
+  bindQuick(el.slMix, 'mix');
+  bindQuick(el.slExp, 'exp');
+  bindQuick(el.slLift, 'lift');
+  bindQuick(el.slTemp, 'temp');
+  bindQuick(el.slCont, 'cont');
+  bindQuick(el.slSat, 'sat');
+
+  document.querySelectorAll('.ctrl-val[data-reset]').forEach(sp => {
+    sp.addEventListener('click', () => {
+      const asset = getActiveAsset();
+      if (!asset) return;
+      const k = sp.dataset.reset;
+      asset.quick[k] = defaultQuick()[k];
+      syncQuickSliders(asset);
+      syncNukeInputs(asset);
+      scheduleRender();
+    });
+  });
+
+  el.btnResetQuick.addEventListener('click', () => {
+    const asset = getActiveAsset();
+    if (!asset) return;
+    asset.quick = defaultQuick();
+    syncQuickSliders(asset);
+    syncNukeInputs(asset);
+    scheduleRender();
+  });
+
+  el.chkBlackClamp.addEventListener('change', () => {
+    const a = getActiveAsset(); if (!a) return;
+    a.grade.blackClamp = el.chkBlackClamp.checked;
+    scheduleRender();
+  });
+  el.chkWhiteClamp.addEventListener('change', () => {
+    const a = getActiveAsset(); if (!a) return;
+    a.grade.whiteClamp = el.chkWhiteClamp.checked;
+    scheduleRender();
+  });
+
+  // Reset all for active asset
+  el.btnReset.addEventListener('click', () => {
+    const a = getActiveAsset(); if (!a) return;
+    a.grade = defaultGrade();
+    a.quick = defaultQuick();
+    a.keyer = defaultKeyer(); a.cc = defaultCC(); a.gradeMask = false;
+    state.showKey = false;
+    a.matched = false;
+    syncUIFromActive();
+    renderAssetList();
+    renderViewport();
+    showToast('已重置当前资产图参数');
+  });
+
+  // Apply current grade to all assets in queue
+  el.btnApplyAll.addEventListener('click', () => {
+    const cur = getActiveAsset();
+    if (!cur || state.assets.length < 2) return;
+    for (const a of state.assets) {
+      if (a.id === cur.id) continue;
+      a.grade = cloneGrade(cur.grade);
+      a.quick = { ...cur.quick };
+      a.keyer = copyKeyer(cur.keyer); a.cc = copyCC(cur.cc); a.gradeMask = !!cur.gradeMask;
+      a.matched = true;
+    }
+    renderAssetList();
+    showToast(`已将当前参数同步至全部 ${state.assets.length} 张资产图`);
+  });
+
+  // Presets
+  el.btnApplyPreset.addEventListener('click', () => {
+    const a = getActiveAsset();
+    if (!a) { showToast('请先在左侧载入资产图'); return; }
+    const all = [...BUILTIN_PRESETS, ...customPresets];
+    const p = all.find(x => x.id === el.presetSelect.value);
+    if (!p) return;
+    applyPresetToAsset(a, p);
+    state.showKey = false;
+    if (p.suffix) el.exportSuffix.value = p.suffix;
+    a.matched = true;
+    syncUIFromActive();
+    renderAssetList();
+    renderViewport();
+    showToast(`已套用预设：${p.name}`);
+  });
+
+  el.btnSavePreset.addEventListener('click', () => {
+    const a = getActiveAsset();
+    if (!a) { showToast('请先载入并调好一张资产图'); return; }
+    const name = prompt('给当前调色预设起个名字（例如：02 上山后初晴 · 夏仁服装）：');
+    if (!name || !name.trim()) return;
+    const p = presetForAsset(a, name.trim());
+    p.id = 'c_' + Date.now();
+    customPresets.push(p);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(customPresets)); } catch (_) {}
+    renderPresetSelect();
+    el.presetSelect.value = p.id;
+    updateButtons();
+    showToast(`预设已保存：${p.name}`);
+  });
+
+  el.btnExportPreset.addEventListener('click', () => {
+    const presets = state.assets.length ? state.assets.map(a => presetForAsset(a)) : customPresets;
+    const blob = new Blob([JSON.stringify({ version: 2, presets }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '凌云渡_资产调色参数包.json';
+    a.click(); URL.revokeObjectURL(url);
+    showToast(`已导出 ${presets.length} 项 Grade / Keyer / CC 参数`);
+  });
+
+  el.btnImportPreset.addEventListener('click', () => el.presetFileInput.click());
+  el.presetFileInput.addEventListener('change', async () => {
+    const f = el.presetFileInput.files[0];
+    el.presetFileInput.value = '';
+    if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      const arr = Array.isArray(data) ? data : data.presets;
+      if (!Array.isArray(arr) || arr.length > 1000) throw new Error('参数包须包含预设数组，最多 1000 项');
+      const imported = arr.map(normalizePreset);
+      const merged = new Map([...customPresets, ...imported].map(p => [p.id, p]));
+      customPresets = [...merged.values()];
+      state.importedPresets = imported;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(customPresets)); } catch (_) {}
+      renderPresetSelect(); updateButtons();
+      if (imported.some(p => p.files.length) && state.assets.length) applyNamedPresets();
+      else showToast(`成功导入 ${imported.length} 项参数；载入图片后可按文件名一键套用`);
+    } catch (error) {
+      showToast('参数包无效：' + error.message);
+    }
+  });
+
+  // Copy Nuke
+  el.btnCopyNuke.addEventListener('click', copyNukeCode);
+  el.btnCopyNuke2.addEventListener('click', copyNukeCode);
+
+  // Pick Output Directory (Edge / Chrome File System Access API)
+  el.btnPickDir.addEventListener('click', async () => {
+    if (!window.showDirectoryPicker) {
+      showToast('当前浏览器不支持直选文件夹，导出将走默认下载目录');
+      return;
+    }
+    try {
+      state.dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      el.dirPill.textContent = `直出目录：${state.dirHandle.name}/`;
+      el.dirPill.classList.add('show');
+      showToast(`已绑定保存目录：${state.dirHandle.name}`);
+    } catch (err) {
+      if (err && err.name !== 'AbortError') {
+        showToast('双击本地 HTML 受浏览器安全策略限制无法直选目录，导出将自动保存到默认下载文件夹');
+      }
+    }
+  });
+
+  // Also allow dropping asset images directly onto the main center viewport
+  el.vpStage.addEventListener('dragover', e => { e.preventDefault(); });
+  el.vpStage.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) addAssetFiles(e.dataTransfer.files);
+  });
+
+  // Exports
+  el.btnExportOne.addEventListener('click', () => {
+    const a = getActiveAsset();
+    if (a) exportAssets([a]);
+  });
+  el.btnExportAll.addEventListener('click', () => exportAssets(state.assets));
+
+  // Window resize refit
+  window.addEventListener('resize', () => { if (getActiveAsset()) fitZoom(); });
+
+  // Init
+  window.assetColorMatch = {
+    snapshot() {
+      return {
+        reference: state.ref ? { id: 'reference', name: state.ref.name, width: state.ref.width, height: state.ref.height, sourceId: state.ref.sourceFile?.dshSourceId } : null,
+        assets: state.assets.map(asset => ({ id: asset.id, name: asset.name, width: asset.width, height: asset.height, sourceId: asset.sourceFile?.dshSourceId, parameters: presetForAsset(asset) })),
+        activeId: state.activeId, suffix: el.exportSuffix.value
+      };
+    },
+    sources() {
+      return [...(state.ref ? [{ id: 'reference', file: state.ref.sourceFile }] : []), ...state.assets.map(asset => ({ id: asset.id, file: asset.sourceFile }))];
+    },
+    async load(files, reference) {
+      if (reference) {
+        await setReferenceFile(reference);
+        if (state.ref?.sourceFile !== reference) throw new Error('参考图加载失败，请检查图片格式');
+      }
+      const fresh = files.filter(file => !state.assets.some(asset => file.dshSourceId && asset.sourceFile?.dshSourceId === file.dshSourceId));
+      if (fresh.length) await addAssetFiles(fresh);
+    },
+    setParameters(updates) {
+      if (!Array.isArray(updates) || !updates.length) throw new Error('需要参数更新列表');
+      const seen = new Set();
+      const staged = updates.map(update => {
+        if (!update || typeof update !== 'object') throw new Error('参数更新格式错误');
+        const matches = state.assets.filter(asset => update.id ? asset.id === update.id : update.name && asset.name.normalize('NFC').toLowerCase() === update.name.normalize('NFC').toLowerCase());
+        if (matches.length !== 1) throw new Error('找不到唯一资产，请 inspect 后使用资产 id：' + (update.name || update.id || '未指定'));
+        const asset = matches[0];
+        if (seen.has(asset.id)) throw new Error('同一资产不能在一次请求中重复更新');
+        seen.add(asset.id);
+        const current = presetForAsset(asset);
+        const next = {
+          ...current, gradeMask: update.gradeMask ?? current.gradeMask,
+          grade: { ...current.grade, ...(update.grade || {}) }, quick: { ...current.quick, ...(update.quick || {}) },
+          keyer: { ...current.keyer, ...(update.keyer || {}) }, cc: { ...current.cc, ...(update.cc || {}) }
+        };
+        for (const band of CC_BANDS) next.cc[band] = { ...current.cc[band], ...(update.cc?.[band] || {}) };
+        return { asset, preset: normalizePreset(next) };
+      });
+      for (const { asset, preset } of staged) applyPresetToAsset(asset, preset);
+      state.showKey = false; syncUIFromActive(); renderAssetList(); renderViewport();
+      showToast('智能体已填写 ' + staged.length + ' 张图片的参数，可继续手动调整');
+      return this.snapshot();
+    },
+    async *renderExports(ids, suffix) {
+      const selected = ids === undefined ? state.assets : ids.map(id => {
+        const asset = state.assets.find(item => item.id === id);
+        if (!asset) throw new Error('找不到资产：' + id);
+        return asset;
+      });
+      if (!selected.length || new Set(selected.map(a => a.id)).size !== selected.length) throw new Error('请选择至少一张图片，且不能重复');
+      const jobs = selected.map(asset => ({ ...asset, grade: cloneGrade(asset.grade), quick: { ...asset.quick }, keyer: copyKeyer(asset.keyer), cc: copyCC(asset.cc) }));
+      const tail = (suffix ?? el.exportSuffix.value).replace(/[\\/:*?"<>|]/g, '').trim() || '_配色';
+      for (const asset of jobs) {
+        showToast('正在按网页当前数值输出：' + asset.name);
+        await new Promise(accept => setTimeout(accept, 0));
+        yield { id: asset.id, name: asset.name.replace(/\.[^.]+$/, '') + tail + '.png', blob: await renderFullResBlob(asset), parameters: presetForAsset(asset) };
+      }
+    }
+  };
+
+  buildNukePanel();
+  buildCCPanel();
+  renderPresetSelect();
+  syncUIFromActive();
+  updateButtons();
+})();
+</script>
+</body>
+</html>

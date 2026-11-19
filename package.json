@@ -1,0 +1,19 @@
+{
+  "name": "dsh-asset-color-match",
+  "version": "0.1.0",
+  "description": "DSH 资产光影匹配：默认浏览器预览，智能体填写 Grade / Keyer / CC，按当前参数输出 PNG。",
+  "type": "module",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/zxw219/dsh-asset-color-match.git" },
+  "homepage": "https://github.com/zxw219/dsh-asset-color-match#readme",
+  "bugs": { "url": "https://github.com/zxw219/dsh-asset-color-match/issues" },
+  "exports": { ".": "./index.js" },
+  "files": ["index.js", "server.js", "web", "cordis.patch.yml", "README.md", "CHANGELOG.md", "docs", "examples", "LICENSE"],
+  "scripts": {
+    "check": "node --check index.js && node --check server.js && node --check web/bridge.js",
+    "test": "node --test tests/*.test.mjs && node tests/legacy-web.cjs",
+    "start": "node server.js"
+  },
+  "engines": { "node": ">=22" },
+  "dsh": { "manifestVersion": 1, "bundle": { "patch": "./cordis.patch.yml" } }
+}

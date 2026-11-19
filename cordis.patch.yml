@@ -1,0 +1,4 @@
+- insert:
+    - id: dsh-asset-color-match
+      name: dsh-asset-color-match
+      config: {}

@@ -1,0 +1,739 @@
+{
+  "version": 2,
+  "name": "上山前 · 航拍暴风雪 · 此前确认配色",
+  "说明": "先载入四张原始资产，再导入本文件。Keyer 与 CC 默认关闭，此包沿用此前确认的 Grade 与饱和度数值。文件名不匹配时不会自动修改图片。",
+  "presets": [
+    {
+      "id": "approved_storm_xr_face",
+      "name": "上山前 · 夏仁人物（此前确认值）",
+      "files": [
+        "角色_夏仁.png",
+        "夏仁.png"
+      ],
+      "mode": "portrait",
+      "suffix": "_上山前_航拍参考",
+      "grade": {
+        "blackpoint": [
+          0,
+          0,
+          0
+        ],
+        "whitepoint": [
+          1,
+          1,
+          1
+        ],
+        "lift": [
+          0,
+          0,
+          0
+        ],
+        "gain": [
+          1,
+          1,
+          1
+        ],
+        "multiply": [
+          0.658,
+          0.7,
+          0.756
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "gamma": [
+          1,
+          1,
+          1
+        ],
+        "blackClamp": true,
+        "whiteClamp": false
+      },
+      "quick": {
+        "mix": 1,
+        "exp": 0,
+        "lift": 0,
+        "temp": 0,
+        "cont": 0,
+        "sat": 0.88
+      },
+      "keyer": {
+        "enabled": false,
+        "operation": "luminance",
+        "range": [
+          0,
+          1,
+          1,
+          1
+        ],
+        "invert": false,
+        "exportAlpha": false
+      },
+      "cc": {
+        "enabled": false,
+        "useKeyer": false,
+        "mix": 1,
+        "master": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "shadows": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "midtones": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "highlights": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "gradeMask": false
+    },
+    {
+      "id": "approved_storm_lxy_face",
+      "name": "上山前 · 凌小莹人物（此前确认值）",
+      "files": [
+        "角色_凌小莹.png",
+        "凌小莹.png"
+      ],
+      "mode": "portrait",
+      "suffix": "_上山前_航拍参考",
+      "grade": {
+        "blackpoint": [
+          0,
+          0,
+          0
+        ],
+        "whitepoint": [
+          1,
+          1,
+          1
+        ],
+        "lift": [
+          0,
+          0,
+          0
+        ],
+        "gain": [
+          1,
+          1,
+          1
+        ],
+        "multiply": [
+          0.705,
+          0.75,
+          0.81
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "gamma": [
+          1,
+          1,
+          1
+        ],
+        "blackClamp": true,
+        "whiteClamp": false
+      },
+      "quick": {
+        "mix": 1,
+        "exp": 0,
+        "lift": 0,
+        "temp": 0,
+        "cont": 0,
+        "sat": 0.9
+      },
+      "keyer": {
+        "enabled": false,
+        "operation": "luminance",
+        "range": [
+          0,
+          1,
+          1,
+          1
+        ],
+        "invert": false,
+        "exportAlpha": false
+      },
+      "cc": {
+        "enabled": false,
+        "useKeyer": false,
+        "mix": 1,
+        "master": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "shadows": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "midtones": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "highlights": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "gradeMask": false
+    },
+    {
+      "id": "approved_storm_xr_cloth",
+      "name": "上山前 · 夏仁服装（此前确认值）",
+      "files": [
+        "服装_夏仁_雪山.png",
+        "夏仁雪山服装.png"
+      ],
+      "mode": "costume",
+      "suffix": "_上山前_航拍参考",
+      "grade": {
+        "blackpoint": [
+          0,
+          0,
+          0
+        ],
+        "whitepoint": [
+          1,
+          1,
+          1
+        ],
+        "lift": [
+          0,
+          0,
+          0
+        ],
+        "gain": [
+          1,
+          1,
+          1
+        ],
+        "multiply": [
+          0.45,
+          0.5,
+          0.55
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "gamma": [
+          1,
+          1,
+          1
+        ],
+        "blackClamp": true,
+        "whiteClamp": false
+      },
+      "quick": {
+        "mix": 1,
+        "exp": 0,
+        "lift": 0,
+        "temp": 0,
+        "cont": 0,
+        "sat": 0.9
+      },
+      "keyer": {
+        "enabled": false,
+        "operation": "luminance",
+        "range": [
+          0,
+          1,
+          1,
+          1
+        ],
+        "invert": false,
+        "exportAlpha": false
+      },
+      "cc": {
+        "enabled": false,
+        "useKeyer": false,
+        "mix": 1,
+        "master": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "shadows": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "midtones": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "highlights": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "gradeMask": false
+    },
+    {
+      "id": "approved_storm_lxy_cloth",
+      "name": "上山前 · 凌小莹服装（此前确认值）",
+      "files": [
+        "服装_凌小莹_雪山.png",
+        "凌小莹雪山服装.png"
+      ],
+      "mode": "costume",
+      "suffix": "_上山前_航拍参考",
+      "grade": {
+        "blackpoint": [
+          0,
+          0,
+          0
+        ],
+        "whitepoint": [
+          1,
+          1,
+          1
+        ],
+        "lift": [
+          0,
+          0,
+          0
+        ],
+        "gain": [
+          1,
+          1,
+          1
+        ],
+        "multiply": [
+          0.45,
+          0.5,
+          0.56
+        ],
+        "offset": [
+          0,
+          0,
+          0
+        ],
+        "gamma": [
+          1,
+          1,
+          1
+        ],
+        "blackClamp": true,
+        "whiteClamp": false
+      },
+      "quick": {
+        "mix": 1,
+        "exp": 0,
+        "lift": 0,
+        "temp": 0,
+        "cont": 0,
+        "sat": 0.9
+      },
+      "keyer": {
+        "enabled": false,
+        "operation": "luminance",
+        "range": [
+          0,
+          1,
+          1,
+          1
+        ],
+        "invert": false,
+        "exportAlpha": false
+      },
+      "cc": {
+        "enabled": false,
+        "useKeyer": false,
+        "mix": 1,
+        "master": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "shadows": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "midtones": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        },
+        "highlights": {
+          "saturation": [
+            1,
+            1,
+            1
+          ],
+          "contrast": [
+            1,
+            1,
+            1
+          ],
+          "gamma": [
+            1,
+            1,
+            1
+          ],
+          "gain": [
+            1,
+            1,
+            1
+          ],
+          "offset": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "gradeMask": false
+    }
+  ]
+}

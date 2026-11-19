@@ -1,0 +1,9 @@
+node_modules/
+*.tgz
+coverage/
+.dsh-asset-color-match/
+配色输出/
+output/
+*.log
+.env*
+!.env.example
